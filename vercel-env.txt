@@ -1,0 +1,11 @@
+NODE_ENV=production
+JWT_SECRET=theday_super_secret_key_2026_xyz_change_me
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=destrepal15@gmail.com
+SMTP_PASS=pggttoifvyzhoeoq
+SMTP_FROM=TheDay Client <destrepal15@gmail.com>
+ADMIN_SECRET=theday_admin_2026
+LAUNCHER_SECRET=theday_launcher_secret_2026
+ALLOWED_ORIGIN=*

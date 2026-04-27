@@ -134,7 +134,7 @@ function showErr(id, msg) {
   el.textContent = msg; el.style.display = msg ? 'block' : 'none';
 }
 
-const SERVER = window.location.origin + '/api';
+const SERVER = 'https://the-day-site-ovk7.vercel.app/api';
 
 async function apiPost(path, body) {
   const r = await fetch(SERVER + path, {
