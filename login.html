@@ -152,7 +152,29 @@ function showDevCode(code, email) {
   const t = document.createElement('div');
   t.id = 'devToast';
   t.style.cssText = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:99999;background:rgba(10,10,18,0.97);border:1px solid rgba(135,206,235,0.3);border-radius:14px;padding:20px 28px;text-align:center;backdrop-filter:blur(20px);font-family:Inter,sans-serif;min-width:280px;box-shadow:0 8px 40px rgba(0,0,0,0.6)';
-  t.innerHTML = `<div style="font-size:10px;color:#4fc3f7;font-weight:700;letter-spacing:2px;margin-bottom:6px">📧 КОД ПОДТВЕРЖДЕНИЯ</div><div style="font-size:11px;color:#4a5568;margin-bottom:10px">${email}</div><div style="font-size:42px;font-weight:900;letter-spacing:10px;color:#87CEEB;font-family:monospace;margin-bottom:6px">${code}</div><div style="font-size:11px;color:#4a5568">Действителен 10 минут</div><button onclick="this.parentElement.remove()" style="position:absolute;top:10px;right:12px;background:none;border:none;color:#4a5568;cursor:pointer;font-size:16px">✕</button>`;
+
+  const label = document.createElement('div');
+  label.style.cssText = 'font-size:10px;color:#4fc3f7;font-weight:700;letter-spacing:2px;margin-bottom:6px';
+  label.textContent = '📧 КОД ПОДТВЕРЖДЕНИЯ';
+
+  const emailEl = document.createElement('div');
+  emailEl.style.cssText = 'font-size:11px;color:#4a5568;margin-bottom:10px';
+  emailEl.textContent = email;
+
+  const codeEl = document.createElement('div');
+  codeEl.style.cssText = 'font-size:42px;font-weight:900;letter-spacing:10px;color:#87CEEB;font-family:monospace;margin-bottom:6px';
+  codeEl.textContent = code;
+
+  const hint = document.createElement('div');
+  hint.style.cssText = 'font-size:11px;color:#4a5568';
+  hint.textContent = 'Действителен 10 минут';
+
+  const closeBtn = document.createElement('button');
+  closeBtn.style.cssText = 'position:absolute;top:10px;right:12px;background:none;border:none;color:#4a5568;cursor:pointer;font-size:16px';
+  closeBtn.textContent = '✕';
+  closeBtn.onclick = () => t.remove();
+
+  t.append(label, emailEl, codeEl, hint, closeBtn);
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 5*60000);
 }

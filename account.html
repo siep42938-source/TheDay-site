@@ -239,7 +239,14 @@ function showModal(type) {
   const settings = JSON.parse(localStorage.getItem('td_settings') || '{}');
   if (settings.avatarData || user.avatar) {
     const navIcon = document.querySelector('.nav-user-icon');
-    if (navIcon) navIcon.innerHTML = `<img src="${settings.avatarData || user.avatar}" style="width:28px;height:28px;border-radius:50%;object-fit:cover" alt="avatar"/>`;
+    if (navIcon) {
+      const img = document.createElement('img');
+      img.src = settings.avatarData || user.avatar;
+      img.style.cssText = 'width:28px;height:28px;border-radius:50%;object-fit:cover';
+      img.alt = 'avatar';
+      navIcon.innerHTML = '';
+      navIcon.appendChild(img);
+    }
   }
 
   // Показываем ссылку на админ-панель всегда

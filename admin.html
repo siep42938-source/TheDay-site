@@ -226,35 +226,107 @@ function filterUsers(q){
 function renderUsers(users){
   const tbody=document.getElementById('usersBody');
   if(!users.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:#4a5568;padding:24px">Нет пользователей</td></tr>';return;}
-  tbody.innerHTML=users.map(u=>`
-    <tr>
-      <td>
-        <div style="font-weight:600;color:#fff">${u.username||'—'}</div>
-        <div style="font-size:10px;color:#4a5568;font-family:monospace">${u.id}</div>
-      </td>
-      <td style="color:#87CEEB">${u.email||'—'}</td>
-      <td><span class="badge ${u.role==='Администратор'?'badge-blue':'badge-gray'}">${u.role||'—'}</span></td>
-      <td>
-        ${u.sub?`<span class="badge badge-green">${u.sub}</span>${u.subExpires&&u.sub!=='Навсегда'?`<div style="font-size:10px;color:#4a5568;margin-top:2px">до ${new Date(u.subExpires).toLocaleDateString('ru-RU')}</div>`:''}`:
-        '<span class="badge badge-gray">Нет</span>'}
-      </td>
-      <td style="font-family:monospace;font-size:10px;color:#4a5568">${u.hwid?u.hwid.slice(0,16)+'...':'—'}</td>
-      <td><span class="badge ${u.banned?'badge-red':'badge-green'}">${u.banned?'Заблокирован':'Активен'}</span></td>
-      <td>
-        <div class="adm-actions">
-          <button class="adm-btn adm-btn-blue" onclick="showSubModal('${u.id}','${u.username}')">📦 Подписка</button>
-          <button class="adm-btn ${u.banned?'adm-btn-green':'adm-btn-red'}" onclick="${u.banned?`unbanUser('${u.id}')`:`banUser('${u.id}')`}">${u.banned?'✓ Разбан':'✗ Бан'}</button>
-          <button class="adm-btn adm-btn-blue" onclick="resetHwidAdmin('${u.id}','${u.username}')">↺ HWID</button>
-          <button class="adm-btn adm-btn-red" onclick="deleteUserAdmin('${u.id}','${u.username}')">🗑</button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
+
+  tbody.innerHTML = '';
+  users.forEach(u => {
+    const tr = document.createElement('tr');
+
+    // Колонка 1: Пользователь
+    const td1 = document.createElement('td');
+    const usernameDiv = document.createElement('div');
+    usernameDiv.style.cssText = 'font-weight:600;color:#fff';
+    usernameDiv.textContent = u.username || '—';
+    const idDiv = document.createElement('div');
+    idDiv.style.cssText = 'font-size:10px;color:#4a5568;font-family:monospace';
+    idDiv.textContent = u.id;
+    td1.append(usernameDiv, idDiv);
+
+    // Колонка 2: Email
+    const td2 = document.createElement('td');
+    td2.style.color = '#87CEEB';
+    td2.textContent = u.email || '—';
+
+    // Колонка 3: Роль
+    const td3 = document.createElement('td');
+    const roleBadge = document.createElement('span');
+    roleBadge.className = `badge ${u.role==='Администратор'?'badge-blue':'badge-gray'}`;
+    roleBadge.textContent = u.role || '—';
+    td3.appendChild(roleBadge);
+
+    // Колонка 4: Подписка
+    const td4 = document.createElement('td');
+    if (u.sub) {
+      const subBadge = document.createElement('span');
+      subBadge.className = 'badge badge-green';
+      subBadge.textContent = u.sub;
+      td4.appendChild(subBadge);
+      if (u.subExpires && u.sub !== 'Навсегда') {
+        const dateDiv = document.createElement('div');
+        dateDiv.style.cssText = 'font-size:10px;color:#4a5568;margin-top:2px';
+        dateDiv.textContent = 'до ' + new Date(u.subExpires).toLocaleDateString('ru-RU');
+        td4.appendChild(dateDiv);
+      }
+    } else {
+      const noSubBadge = document.createElement('span');
+      noSubBadge.className = 'badge badge-gray';
+      noSubBadge.textContent = 'Нет';
+      td4.appendChild(noSubBadge);
+    }
+
+    // Колонка 5: HWID
+    const td5 = document.createElement('td');
+    td5.style.cssText = 'font-family:monospace;font-size:10px;color:#4a5568';
+    td5.textContent = u.hwid ? u.hwid.slice(0,16)+'...' : '—';
+
+    // Колонка 6: Статус
+    const td6 = document.createElement('td');
+    const statusBadge = document.createElement('span');
+    statusBadge.className = `badge ${u.banned?'badge-red':'badge-green'}`;
+    statusBadge.textContent = u.banned ? 'Заблокирован' : 'Активен';
+    td6.appendChild(statusBadge);
+
+    // Колонка 7: Действия
+    const td7 = document.createElement('td');
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'adm-actions';
+
+    const subBtn = document.createElement('button');
+    subBtn.className = 'adm-btn adm-btn-blue';
+    subBtn.textContent = '📦 Подписка';
+    subBtn.onclick = () => showSubModal(u.id, u.username);
+
+    const banBtn = document.createElement('button');
+    banBtn.className = `adm-btn ${u.banned?'adm-btn-green':'adm-btn-red'}`;
+    banBtn.textContent = u.banned ? '✓ Разбан' : '✗ Бан';
+    banBtn.onclick = () => u.banned ? unbanUser(u.id) : banUser(u.id);
+
+    const hwidBtn = document.createElement('button');
+    hwidBtn.className = 'adm-btn adm-btn-blue';
+    hwidBtn.textContent = '↺ HWID';
+    hwidBtn.onclick = () => resetHwidAdmin(u.id, u.username);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'adm-btn adm-btn-red';
+    delBtn.textContent = '🗑';
+    delBtn.onclick = () => deleteUserAdmin(u.id, u.username);
+
+    actionsDiv.append(subBtn, banBtn, hwidBtn, delBtn);
+    td7.appendChild(actionsDiv);
+
+    tr.append(td1, td2, td3, td4, td5, td6, td7);
+    tbody.appendChild(tr);
+  });
 }
 
-function showSubModal(id,username){
-  document.getElementById('modalContent').innerHTML=`
-    <h3 style="color:#fff;margin-bottom:16px">📦 Подписка — ${username}</h3>
+function showSubModal(id, username){
+  const content = document.getElementById('modalContent');
+  content.innerHTML = '';
+
+  const title = document.createElement('h3');
+  title.style.cssText = 'color:#fff;margin-bottom:16px';
+  title.textContent = '📦 Подписка — ' + username;
+
+  content.innerHTML = `
     <div class="modal-inner">
       <div>
         <label>Тип подписки</label>
@@ -269,11 +341,15 @@ function showSubModal(id,username){
         <label>Дней (для кастомного срока)</label>
         <input class="glass-input" id="subDays" type="number" placeholder="30" value="30" style="width:100%"/>
       </div>
-      <button class="btn-primary" style="width:100%;justify-content:center" onclick="giveSubAdmin('${id}')">Выдать подписку</button>
-      <button class="adm-btn adm-btn-red" style="width:100%;justify-content:center" onclick="removeSubAdmin('${id}')">Убрать подписку</button>
+      <button class="btn-primary" style="width:100%;justify-content:center" id="giveSubBtn">Выдать подписку</button>
+      <button class="adm-btn adm-btn-red" style="width:100%;justify-content:center" id="removeSubBtn">Убрать подписку</button>
       <div class="adm-msg" id="subMsg"></div>
     </div>
   `;
+  content.prepend(title);
+
+  document.getElementById('giveSubBtn').onclick = () => giveSubAdmin(id);
+  document.getElementById('removeSubBtn').onclick = () => removeSubAdmin(id);
   document.getElementById('modalOverlay').classList.add('active');
 }
 

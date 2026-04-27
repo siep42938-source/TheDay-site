@@ -13,11 +13,19 @@ const API = {
   async req(method, path, body) {
     const headers = { 'Content-Type': 'application/json' };
     if (this.token()) headers['Authorization'] = 'Bearer ' + this.token();
-    const res = await fetch(this.base + path, {
-      method, headers,
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    const data = await res.json();
+    let res;
+    try {
+      res = await fetch(this.base + path, {
+        method, headers,
+        body: body ? JSON.stringify(body) : undefined,
+        signal: AbortSignal.timeout(5000),
+      });
+    } catch {
+      throw new Error('Сервер недоступен');
+    }
+    let data;
+    try { data = await res.json(); }
+    catch { throw new Error('Ошибка сервера'); }
     if (!res.ok) throw new Error(data.error || 'Ошибка сервера');
     return data;
   },

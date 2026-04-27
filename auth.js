@@ -210,7 +210,6 @@ const Auth = {
 
   // ── Показать код на экране (без сервера) ─────────────────
   _showDevCode(code, email) {
-    // Удаляем старый тост если есть
     document.getElementById('devCodeToast')?.remove();
 
     const toast = document.createElement('div');
@@ -228,23 +227,31 @@ const Auth = {
       animation:slideDown .4s cubic-bezier(.16,1,.3,1);
       min-width:280px;
     `;
-    toast.innerHTML = `
-      <div style="font-size:11px;color:#4fc3f7;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">
-        📧 Код подтверждения
-      </div>
-      <div style="font-size:11px;color:#4a5568;margin-bottom:12px">${email}</div>
-      <div style="font-size:42px;font-weight:900;letter-spacing:10px;color:#87CEEB;font-family:monospace;margin-bottom:8px">
-        ${code}
-      </div>
-      <div style="font-size:11px;color:#4a5568">Действителен 10 минут</div>
-      <button onclick="this.parentElement.remove()" style="
-        position:absolute;top:10px;right:12px;
-        background:none;border:none;color:#4a5568;cursor:pointer;font-size:16px;
-      ">✕</button>
-    `;
+
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:11px;color:#4fc3f7;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px';
+    label.textContent = '📧 Код подтверждения';
+
+    const emailEl = document.createElement('div');
+    emailEl.style.cssText = 'font-size:11px;color:#4a5568;margin-bottom:12px';
+    emailEl.textContent = email;
+
+    const codeEl = document.createElement('div');
+    codeEl.style.cssText = 'font-size:42px;font-weight:900;letter-spacing:10px;color:#87CEEB;font-family:monospace;margin-bottom:8px';
+    codeEl.textContent = code;
+
+    const hint = document.createElement('div');
+    hint.style.cssText = 'font-size:11px;color:#4a5568';
+    hint.textContent = 'Действителен 10 минут';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.style.cssText = 'position:absolute;top:10px;right:12px;background:none;border:none;color:#4a5568;cursor:pointer;font-size:16px';
+    closeBtn.textContent = '✕';
+    closeBtn.onclick = () => toast.remove();
+
+    toast.append(label, emailEl, codeEl, hint, closeBtn);
     document.body.appendChild(toast);
 
-    // Добавляем анимацию
     if (!document.getElementById('devCodeStyle')) {
       const s = document.createElement('style');
       s.id = 'devCodeStyle';
@@ -252,7 +259,6 @@ const Auth = {
       document.head.appendChild(s);
     }
 
-    // Автоудаление через 5 минут
     setTimeout(() => toast.remove(), 5 * 60000);
   },
 };
