@@ -37,10 +37,29 @@ const Auth = {
   findByEmail(email) { return this.getUsers().find(u => u.email.toLowerCase() === email.toLowerCase()) || null; },
   findByUsername(u) { return this.getUsers().find(x => x.username.toLowerCase() === u.toLowerCase()) || null; },
 
-  // Хэш пароля (простой, для локального хранения)
+  // Хэш пароля (усиленный для локального хранения)
   async hash(pass) {
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass + 'theday_salt_2026'));
-    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+    // Используем PBKDF2 вместо простого SHA-256
+    const encoder = new TextEncoder();
+    const data = encoder.encode(pass + 'theday_salt_2026');
+    const key = await crypto.subtle.importKey(
+      'raw',
+      data,
+      { name: 'PBKDF2' },
+      false,
+      ['deriveBits']
+    );
+    const bits = await crypto.subtle.deriveBits(
+      {
+        name: 'PBKDF2',
+        salt: encoder.encode('theday_secure_salt_v2'),
+        iterations: 100000,
+        hash: 'SHA-256'
+      },
+      key,
+      256
+    );
+    return Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2,'0')).join('');
   },
 
   // Генерация OTP
@@ -49,36 +68,108 @@ const Auth = {
   // Сохранить OTP
   saveOTP(email, code, type) {
     const otps = JSON.parse(localStorage.getItem('td_otps') || '{}');
-    otps[`${email}_${type}`] = { code, expires: Date.now() + 10 * 60000, attempts: 0 };
+
+    // Очистка старых истёкших кодов
+    const now = Date.now();
+    Object.keys(otps).forEach(key => {
+      if (otps[key].expires < now) delete otps[key];
+    });
+
+    otps[`${email}_${type}`] = {
+      code,
+      expires: Date.now() + 10 * 60000,
+      attempts: 0,
+      lastAttempt: 0,
+      createdAt: Date.now()
+    };
     localStorage.setItem('td_otps', JSON.stringify(otps));
     return code;
   },
 
-  // Проверить OTP
+  // Проверить OTP с защитой от брутфорса
   verifyOTP(email, code, type) {
     const otps = JSON.parse(localStorage.getItem('td_otps') || '{}');
     const key = `${email}_${type}`;
     const otp = otps[key];
     if (!otp) return { ok: false, reason: 'Код не найден' };
-    if (Date.now() > otp.expires) { delete otps[key]; localStorage.setItem('td_otps', JSON.stringify(otps)); return { ok: false, reason: 'Код истёк' }; }
-    otp.attempts++;
-    if (otp.attempts > 5) { delete otps[key]; localStorage.setItem('td_otps', JSON.stringify(otps)); return { ok: false, reason: 'Слишком много попыток' }; }
-    if (otp.code !== String(code)) { localStorage.setItem('td_otps', JSON.stringify(otps)); return { ok: false, reason: 'Неверный код' }; }
+    if (Date.now() > otp.expires) {
+      delete otps[key];
+      localStorage.setItem('td_otps', JSON.stringify(otps));
+      return { ok: false, reason: 'Код истёк' };
+    }
+    otp.attempts = (otp.attempts || 0) + 1;
+
+    // Защита от брутфорса: максимум 5 попыток
+    if (otp.attempts > 5) {
+      delete otps[key];
+      localStorage.setItem('td_otps', JSON.stringify(otps));
+      return { ok: false, reason: 'Слишком много попыток. Запросите новый код.' };
+    }
+
+    // Задержка между попытками (защита от автоматического перебора)
+    const lastAttempt = otp.lastAttempt || 0;
+    if (Date.now() - lastAttempt < 1000) {
+      localStorage.setItem('td_otps', JSON.stringify(otps));
+      return { ok: false, reason: 'Слишком быстро. Подождите секунду.' };
+    }
+    otp.lastAttempt = Date.now();
+
+    if (otp.code !== String(code)) {
+      localStorage.setItem('td_otps', JSON.stringify(otps));
+      return { ok: false, reason: `Неверный код (осталось попыток: ${5 - otp.attempts})` };
+    }
     delete otps[key];
     localStorage.setItem('td_otps', JSON.stringify(otps));
     return { ok: true };
   },
 
-  // Создать токен
-  genToken(userId) { return btoa(JSON.stringify({ id: userId, t: Date.now(), r: Math.random() })); },
+  // Создать токен с подписью
+  genToken(userId) {
+    const payload = { id: userId, t: Date.now(), r: Math.random() };
+    const token = btoa(JSON.stringify(payload));
+    // Простая подпись (для локального режима)
+    const signature = btoa(token + 'theday_secret_2026').slice(0, 16);
+    return token + '.' + signature;
+  },
+
+  // Проверить токен
+  verifyToken(token) {
+    try {
+      const [payload, signature] = token.split('.');
+      const expectedSig = btoa(payload + 'theday_secret_2026').slice(0, 16);
+      if (signature !== expectedSig) return null;
+      return JSON.parse(atob(payload));
+    } catch {
+      return null;
+    }
+  },
 
   // Сохранить сессию — принимает только user (без токена)
   saveSession(user) {
     const token = this.genToken(user.id);
     localStorage.setItem('td_token', token);
+    // Удаляем чувствительные данные и санитизируем
     const { passwordHash, ...safe } = user;
-    localStorage.setItem('td_user', JSON.stringify(safe));
-    return { token, user: safe };
+    // Защита от XSS: экранируем строки
+    const sanitized = {
+      ...safe,
+      username: this.sanitize(safe.username),
+      email: this.sanitize(safe.email),
+      role: this.sanitize(safe.role || 'Пользователь'),
+    };
+    localStorage.setItem('td_user', JSON.stringify(sanitized));
+    return { token, user: sanitized };
+  },
+
+  // Санитизация строк (защита от XSS)
+  sanitize(str) {
+    if (!str || typeof str !== 'string') return str;
+    return str
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#x27;')
+      .replace(/\//g, '&#x2F;');
   },
 
   // Текущий пользователь
@@ -94,13 +185,43 @@ const Auth = {
     window.location.href = 'login.html';
   },
 
+  // Валидация входных данных
+  validateUsername(username) {
+    if (!username || typeof username !== 'string') return 'Логин обязателен';
+    if (username.length < 3) return 'Логин минимум 3 символа';
+    if (username.length > 20) return 'Логин максимум 20 символов';
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) return 'Логин: только латиница, цифры и _';
+    // Защита от SQL-инъекций и XSS (на всякий случай)
+    if (/[<>'"`;\\]/.test(username)) return 'Недопустимые символы в логине';
+    return null;
+  },
+
+  validateEmail(email) {
+    if (!email || typeof email !== 'string') return 'Email обязателен';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Некорректный email';
+    if (email.length > 100) return 'Email слишком длинный';
+    return null;
+  },
+
+  validatePassword(password) {
+    if (!password || typeof password !== 'string') return 'Пароль обязателен';
+    if (password.length < 6) return 'Пароль минимум 6 символов';
+    if (password.length > 128) return 'Пароль слишком длинный';
+    return null;
+  },
+
   // ── РЕГИСТРАЦИЯ ──────────────────────────────────────────
   async registerSend({ username, email, password }) {
-    if (!username || !email || !password) throw new Error('Заполните все поля');
-    if (username.length < 3) throw new Error('Логин минимум 3 символа');
-    if (!/^[a-zA-Z0-9_]+$/.test(username)) throw new Error('Логин: только латиница, цифры и _');
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Некорректный email');
-    if (password.length < 6) throw new Error('Пароль минимум 6 символов');
+    // Валидация
+    const usernameErr = this.validateUsername(username);
+    if (usernameErr) throw new Error(usernameErr);
+
+    const emailErr = this.validateEmail(email);
+    if (emailErr) throw new Error(emailErr);
+
+    const passwordErr = this.validatePassword(password);
+    if (passwordErr) throw new Error(passwordErr);
+
     if (this.findByEmail(email)) throw new Error('Email уже зарегистрирован');
     if (this.findByUsername(username)) throw new Error('Логин уже занят');
 

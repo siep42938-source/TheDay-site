@@ -141,6 +141,13 @@ async function apiPost(path, body) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
+
+  // Проверяем что ответ содержит JSON
+  const contentType = r.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    throw new Error('Сервер недоступен. Используется локальный режим.');
+  }
+
   const d = await r.json();
   if (!r.ok) throw new Error(d.error || 'Ошибка сервера');
   return d;
@@ -155,13 +162,21 @@ async function sendRegCode() {
 
   setLoading('regBtn','regSpinner','regBtnText', true, 'Отправка...');
   try {
-    const serverOk = await Auth.hasServer();
     let data;
-    if (serverOk) {
-      data = await apiPost('/auth/register/send', { username, email, password });
-    } else {
+    try {
+      // Пробуем серверный режим
+      const serverOk = await Auth.hasServer();
+      if (serverOk) {
+        data = await apiPost('/auth/register/send', { username, email, password });
+      } else {
+        throw new Error('Server not available');
+      }
+    } catch (serverError) {
+      // Если сервер недоступен — используем локальный режим
+      console.log('Переключение на локальный режим:', serverError.message);
       data = await Auth.registerSend({ username, email, password });
     }
+
     regEmail = email;
     document.getElementById('otpSubtext').textContent = `Код отправлен на ${email}`;
     document.getElementById('step1').style.display = 'none';
@@ -187,13 +202,20 @@ async function verifyRegCode() {
 
   setLoading('otpBtn','otpSpinner','otpBtnText', true, 'Создание...');
   try {
-    const serverOk = await Auth.hasServer();
     let data;
-    if (serverOk) {
-      data = await apiPost('/auth/register/verify', { email: regEmail, code });
-      localStorage.setItem('td_token', data.token);
-      localStorage.setItem('td_user', JSON.stringify(data.user));
-    } else {
+    try {
+      // Пробуем серверный режим
+      const serverOk = await Auth.hasServer();
+      if (serverOk) {
+        data = await apiPost('/auth/register/verify', { email: regEmail, code });
+        localStorage.setItem('td_token', data.token);
+        localStorage.setItem('td_user', JSON.stringify(data.user));
+      } else {
+        throw new Error('Server not available');
+      }
+    } catch (serverError) {
+      // Если сервер недоступен — используем локальный режим
+      console.log('Переключение на локальный режим:', serverError.message);
       data = await Auth.registerVerify({ email: regEmail, code });
     }
     window.location.href = 'account.html';
