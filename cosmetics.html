@@ -1,0 +1,57 @@
+﻿<!DOCTYPE html>
+<html lang="ru" data-theme="space">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Косметика — TheDay Client</title>
+  <meta http-equiv="X-Frame-Options" content="DENY"/>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" crossorigin="anonymous"/>
+  <style>
+    .cosm-page { display:flex; gap:24px; margin-bottom:28px; }
+    .cosm-char-wrap { width:200px; min-width:200px; background:rgba(13,13,20,0.8); border:1px solid rgba(135,206,235,0.1); border-radius:16px; padding:20px; display:flex; flex-direction:column; align-items:center; gap:12px; }
+    #charCanvas { border-radius:10px; background:radial-gradient(ellipse at 50% 80%, rgba(135,206,235,0.08) 0%, transparent 70%); }
+    .cosm-char-label { font-size:11px; color:#4a5568; text-transform:uppercase; letter-spacing:1.5px; }
+    .cosm-slots { flex:1; background:rgba(13,13,20,0.8); border:1px solid rgba(135,206,235,0.1); border-radius:16px; padding:24px; }
+    .cosm-slots-title { font-size:15px; font-weight:700; color:#fff; margin-bottom:4px; }
+    .cosm-slots-sub { font-size:12px; color:#4a5568; margin-bottom:20px; }
+    .cosm-slot { display:flex; align-items:center; gap:14px; padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+    .cosm-slot:last-child { border-bottom:none; }
+    .cosm-slot-ico { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+    .cosm-slot-info { flex:1; }
+    .cosm-slot-type { font-size:11px; color:#4a5568; text-transform:uppercase; letter-spacing:1px; margin-bottom:2px; }
+    .cosm-slot-name { font-size:13px; color:#718096; font-weight:500; }
+    .cosm-slot-name.equipped { color:#87CEEB; }
+    .cosm-tabs-row { display:flex; gap:8px; margin-bottom:20px; }
+    .cosm-tab { padding:8px 22px; border-radius:20px; font-size:13px; font-weight:600; cursor:pointer; border:1px solid rgba(135,206,235,0.15); background:transparent; color:#718096; transition:all .2s; font-family:inherit; }
+    .cosm-tab.active { background:rgba(135,206,235,0.15); border-color:rgba(135,206,235,0.4); color:#87CEEB; }
+    .cosm-cats-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:24px; }
+    .cosm-cat { padding:6px 16px; border-radius:20px; font-size:12px; font-weight:500; cursor:pointer; border:1px solid rgba(255,255,255,0.07); background:transparent; color:#718096; transition:all .2s; font-family:inherit; }
+    .cosm-cat.active { background:rgba(135,206,235,0.1); border-color:rgba(135,206,235,0.3); color:#87CEEB; }
+    .cosm-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+    .cosm-card { background:rgba(13,13,20,0.8); border:1px solid rgba(135,206,235,0.07); border-radius:14px; overflow:hidden; cursor:pointer; transition:transform .2s, border-color .2s, box-shadow .2s; position:relative; }
+    .cosm-card:hover { transform:translateY(-4px); border-color:rgba(135,206,235,0.25); box-shadow:0 12px 32px rgba(0,0,0,0.5); }
+    .cosm-card-img { width:100%; aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:44px; position:relative; }
+    .cosm-card-img::after { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at 50% 100%, rgba(135,206,235,0.06) 0%, transparent 70%); pointer-events:none; }
+    .cosm-card-body { padding:12px 14px 14px; }
+    .cosm-card-cat { font-size:10px; color:#4a5568; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:4px; }
+    .cosm-card-name { font-size:14px; font-weight:700; color:#e2e8f0; margin-bottom:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .cosm-card-footer { display:flex; align-items:center; justify-content:space-between; }
+    .cosm-card-price { font-size:15px; font-weight:800; color:#87CEEB; }
+    .cosm-card-price.free { color:#34d399; }
+    .cosm-card-btn { padding:5px 14px; border-radius:20px; font-size:11px; font-weight:700; cursor:pointer; border:none; font-family:inherit; transition:all .2s; }
+    .cosm-card-btn.buy { background:rgba(135,206,235,0.12); color:#87CEEB; border:1px solid rgba(135,206,235,0.25); }
+    .cosm-card-btn.buy:hover { background:rgba(135,206,235,0.22); }
+    .cosm-card-btn.free { background:linear-gradient(135deg,#34d399,#059669); color:#fff; }
+    .cosm-card-btn.owned { background:rgba(52,211,153,0.12); color:#34d399; border:1px solid rgba(52,211,153,0.3); }
+    .cosm-card-btn.nofunds { background:rgba(255,255,255,0.04); color:#4a5568; cursor:not-allowed; }
+    .cosm-new { position:absolute; top:8px; right:8px; background:linear-gradient(135deg,#ef4444,#dc2626); color:#fff; font-size:9px; font-weight:800; letter-spacing:1px; padding:2px 8px; border-radius:20px; z-index:1; }
+    .cosm-modal-img { font-size:80px; margin-bottom:16px; display:block; text-align:center; filter:drop-shadow(0 0 20px var(--cosm-color,#87CEEB)); }
+    @media(max-width:900px) { .cosm-page{flex-direction:column} .cosm-char-wrap{width:100%;flex-direction:row;padding:16px} .cosm-grid{grid-template-columns:repeat(2,1fr)} }
+    @media(max-width:500px) { .cosm-grid{grid-template-columns:1fr 1fr} }
+  </style>
+</head>
+<body>
+<canvas id="spaceCanvas"></canvas>
+<div class="page-transition" id="pageTransition"></div>

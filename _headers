@@ -1,0 +1,39 @@
+# =============================================================
+# Netlify / Cloudflare Pages — файл заголовков безопасности
+# Положи этот файл в корень проекта (рядом с index.html)
+# =============================================================
+
+# Принудительный редирект HTTP → HTTPS (Cloudflare Pages делает это автоматически,
+# для Netlify включи "Force HTTPS" в настройках сайта + этот заголовок)
+http://:splat
+  Location: https://:splat
+  Status: 301
+
+# Применяем заголовки ко всем страницам
+/*
+  # Запрет встраивания во фреймы — защита от кликджекинга
+  X-Frame-Options: DENY
+
+  # Запрет MIME-сниффинга — браузер не будет угадывать тип контента
+  X-Content-Type-Options: nosniff
+
+  # Политика реферера — не утекает полный URL при переходе на внешние сайты
+  Referrer-Policy: strict-origin-when-cross-origin
+
+  # HSTS — браузер запомнит, что сайт только HTTPS (1 год + поддомены)
+  # ВНИМАНИЕ: включай только когда HTTPS точно работает!
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+
+  # Запрет доступа к чувствительным API браузера
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), interest-cohort=()
+
+  # Content Security Policy
+  Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;
+
+  # Запрет передачи данных в сторонние сервисы через Cross-Origin
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+  Cross-Origin-Resource-Policy: same-origin
+
+  # Скрываем информацию о сервере
+  Server: .

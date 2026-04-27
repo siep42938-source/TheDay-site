@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../launchet"
+		}
+	],
+	"settings": {
+		"task.allowAutomaticTasks": "off"
+	}
+}

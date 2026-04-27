@@ -1,0 +1,85 @@
+/* ============================================================
+   TheDay Client — API клиент
+   Все запросы к серверу через этот модуль
+   ============================================================ */
+
+const API = {
+  base: window.location.origin + '/api',
+
+  // Получить токен из localStorage
+  token() { return localStorage.getItem('td_token') },
+
+  // Базовый fetch с авторизацией
+  async req(method, path, body) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (this.token()) headers['Authorization'] = 'Bearer ' + this.token();
+    const res = await fetch(this.base + path, {
+      method, headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Ошибка сервера');
+    return data;
+  },
+
+  get: (path) => API.req('GET', path),
+  post: (path, body) => API.req('POST', path, body),
+  patch: (path, body) => API.req('PATCH', path, body),
+
+  // ── Auth ──
+  auth: {
+    registerSend: (d) => API.post('/auth/register/send', d),
+    registerVerify: (d) => API.post('/auth/register/verify', d),
+    loginSend: (d) => API.post('/auth/login/send', d),
+    loginVerify: (d) => API.post('/auth/login/verify', d),
+    resetSend: (d) => API.post('/auth/reset/send', d),
+    resetVerify: (d) => API.post('/auth/reset/verify', d),
+  },
+
+  // ── User ──
+  user: {
+    me: () => API.get('/user/me'),
+    update: (d) => API.patch('/user/me', d),
+    changePassword: (d) => API.post('/user/change-password', d),
+    activateKey: (d) => API.post('/user/activate-key', d),
+    resetHwid: () => API.post('/user/reset-hwid', {}),
+  },
+
+  // Сохранить токен и пользователя
+  saveSession(token, user) {
+    localStorage.setItem('td_token', token);
+    localStorage.setItem('td_user', JSON.stringify(user));
+  },
+
+  // Выйти
+  logout() {
+    localStorage.removeItem('td_token');
+    localStorage.removeItem('td_user');
+    localStorage.removeItem('td_pending');
+    window.location.href = 'login.html';
+  },
+
+  // Проверить авторизацию
+  isLoggedIn() { return !!this.token() },
+
+  // Получить текущего пользователя из localStorage
+  currentUser() {
+    try { return JSON.parse(localStorage.getItem('td_user') || 'null'); }
+    catch { return null; }
+  },
+
+  // Синхронизировать данные пользователя с сервером
+  async syncUser() {
+    if (!this.token()) return null;
+    try {
+      const data = await this.user.me();
+      if (data.user) {
+        localStorage.setItem('td_user', JSON.stringify(data.user));
+        return data.user;
+      }
+    } catch { /* токен истёк или сервер недоступен */ }
+    return this.currentUser();
+  },
+};
+
+window.API = API;

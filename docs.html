@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="space">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Документы — TheDay Client</title>
+  <meta http-equiv="X-Frame-Options" content="DENY"/>
+  <meta http-equiv="X-Content-Type-Options" content="nosniff"/>
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin"/>
+  <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"/>
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;"/>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" crossorigin="anonymous"/>
+</head>
+<body>
+<canvas id="spaceCanvas"></canvas>
+<nav class="navbar" id="navbar">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 1L11.5 6.5H17L12.5 10L14.5 16L9 12.5L3.5 16L5.5 10L1 6.5H6.5L9 1Z" fill="#87CEEB"/></svg>
+      TheDay
+    </a>
+    <ul class="nav-links">
+      <li><a href="docs.html" class="nav-active">Документы</a></li>
+      <li><a href="index.html#buy">Купить</a></li>
+      <li><a href="index.html#support">Поддержка</a></li>
+      <li><a href="#" class="nav-lang">RU</a></li>
+    </ul>
+    <a href="login.html" class="btn-login">Войти</a>
+  </div>
+</nav>
+
+<div class="docs-page">
+  <div class="container">
+    <div class="docs-tag">ДОКУМЕНТЫ THEDAY</div>
+    <h1 class="docs-title">Пользовательское соглашение</h1>
+    <p class="docs-date">Последнее обновление: 25.04.2026</p>
+
+    <div class="docs-tabs">
+      <button class="docs-tab active" onclick="switchDoc(this,'tos')">📄 Пользовательское соглашение</button>
+      <button class="docs-tab" onclick="switchDoc(this,'privacy')">🔒 Политика конфиденциальности</button>
+      <button class="docs-tab" onclick="switchDoc(this,'refund')">💰 Политика возврата</button>
+    </div>
+
+    <div class="glass-card docs-content" id="docContent">
+      <div id="tos">
+        <h3>Общие положения</h3>
+        <p>ИП Иванов Иван Иванович | ИНН 123456789012 | ОГРНИП 123456789012345, далее «Продавец», публикует Публичную оферту о реализации Услуг, размещённых на официальном сайте Программы.</p>
+        <p>В соответствии со статьёй 437 Гражданского кодекса Российской Федерации (ГК РФ) данный документ является публичной офертой, и в случае принятия изложенных ниже условий физическое лицо, производящее акцепт этой оферты, осуществляет оплату Услуг в соответствии с условиями настоящего Договора.</p>
+
+        <h3>Предмет договора</h3>
+        <p>Продавец реализует Услуги в соответствии с действующим прейскурантом, опубликованным на интернет-сайте Продавца в интерактивной форме, а Покупатель производит оплату и принимает Услуги в соответствии с условиями настоящего Договора.</p>
+
+        <h3>Описание Услуги</h3>
+        <p>Услуга представляет собой предоставление доступа к программному обеспечению «TheDay Client» — клиенту для игры Minecraft, разработанному на базе Fabric API.</p>
+
+        <h3>Системные требования</h3>
+        <div class="docs-req-grid">
+          <div class="docs-req-card">
+            <div class="docs-req-title">МИНИМАЛЬНЫЕ</div>
+            <ul>
+              <li>Intel Core i3-3210 / AMD A8-7600 APU</li>
+              <li>4 GB RAM</li>
+              <li>Intel HD Graphics 4000 / AMD Radeon R5 (OpenGL 4.4)</li>
+              <li>8 GB свободного пространства</li>
+              <li>Windows 10 / 11 или выше</li>
+            </ul>
+          </div>
+          <div class="docs-req-card">
+            <div class="docs-req-title">РЕКОМЕНДУЕМЫЕ</div>
+            <ul>
+              <li>Intel Core i5-4690 / AMD A10-7800</li>
+              <li>8 GB RAM</li>
+              <li>NVIDIA GeForce 700 / AMD Radeon Rx 200 (OpenGL 4.5)</li>
+              <li>12 GB свободного пространства</li>
+              <li>Windows 10 / 11 или выше</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>Правила использования</h3>
+        <p>Пользователю <strong>запрещено</strong> — осуществлять любые действия, направленные на подрыв репутации и качества нашей продукции.</p>
+        <p>Пользователю <strong>запрещено</strong> — передавать, продавать, покупать или иным образом распоряжаться своим или чужим аккаунтом, а также использовать учётные записи, не принадлежащие ему.</p>
+        <p>Пользователю <strong>запрещено</strong> — заниматься вредоносной деятельностью, включая мошенничество, обман, DDoS-атаки, раскрытие личной или частной информации.</p>
+        <p>Администрация не несёт ответственности за внутриигровые блокировки. Продукты используются на Ваш страх и риск.</p>
+      </div>
+
+      <div id="privacy" style="display:none">
+        <h3>Политика конфиденциальности</h3>
+        <p>Настоящая Политика конфиденциальности описывает, как TheDay Client собирает, использует и защищает вашу личную информацию.</p>
+        <h3>Сбор данных</h3>
+        <p>Мы собираем только необходимые данные: email, логин, HWID устройства для защиты от несанкционированного использования.</p>
+        <h3>Использование данных</h3>
+        <p>Ваши данные используются исключительно для предоставления услуг и не передаются третьим лицам.</p>
+        <h3>Безопасность</h3>
+        <p>Все данные хранятся в зашифрованном виде. Мы используем современные методы защиты информации.</p>
+      </div>
+
+      <div id="refund" style="display:none">
+        <h3>Политика возврата</h3>
+        <p>Возврат средств возможен в течение 24 часов с момента покупки при условии, что клиент не был активирован.</p>
+        <h3>Условия возврата</h3>
+        <ul style="margin-left:20px;margin-top:10px;display:flex;flex-direction:column;gap:8px">
+          <li>Обращение в поддержку в течение 24 часов</li>
+          <li>Клиент не был запущен или активирован</li>
+          <li>Наличие подтверждения оплаты</li>
+        </ul>
+        <h3>Исключения</h3>
+        <p>Возврат не производится если клиент был заблокирован за нарушение правил использования.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-col">
+      <a href="index.html" class="nav-logo" style="margin-bottom:10px;display:flex">
+        <svg width="16" height="16" viewBox="0 0 18 18"><path d="M9 1L11.5 6.5H17L12.5 10L14.5 16L9 12.5L3.5 16L5.5 10L1 6.5H6.5L9 1Z" fill="#87CEEB"/></svg>
+        TheDay
+      </a>
+      <p>Самый мощный Minecraft клиент на рынке.</p>
+    </div>
+    <div class="footer-col">
+      <div class="footer-heading">ПРОДУКТ</div>
+      <a href="#">Скачать</a><a href="index.html#buy">Купить</a><a href="index.html#support">Поддержка</a>
+    </div>
+    <div class="footer-col">
+      <div class="footer-heading">ДОКУМЕНТЫ</div>
+      <a href="docs.html">Пользовательское соглашение</a>
+      <a href="docs.html">Политика конфиденциальности</a>
+      <a href="docs.html">Политика возврата</a>
+    </div>
+  </div>
+  <div class="footer-bottom">© 2026 TheDay. Все права защищены.</div>
+</footer>
+
+<script src="api.js"></script><script src="auth.js"></script><script src="smooth.js"></script><script src="theme.js"></script><script src="main.js"></script>
+<script>
+function switchDoc(btn, id){
+  document.querySelectorAll('.docs-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  ['tos','privacy','refund'].forEach(d=>{
+    document.getElementById(d).style.display = d===id?'block':'none';
+  });
+}
+</script>
+</body>
+</html>

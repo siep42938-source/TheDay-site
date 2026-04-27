@@ -1,0 +1,36 @@
+{
+  "users": [
+    {
+      "id": "14f41fd1-2f74-4aba-be63-bab9a1ee575e",
+      "username": "destrepal15",
+      "email": "destrepal15@gmail.com",
+      "passwordHash": "$2a$12$I0E3PeAbAuwwmmiel8uTsux1M6VNz3oK.ce0XV80WkfkavqtEgviW",
+      "role": "Пользователь",
+      "createdAt": "2026-04-27T07:22:24.783Z",
+      "hwid": null,
+      "sub": "Навсегда",
+      "subExpires": "2026-05-27T08:03:52.501Z",
+      "avatar": null,
+      "banned": false,
+      "banReason": "",
+      "lastHwidReset": null
+    },
+    {
+      "id": "67adbc7c-4cc8-45e5-9efe-99c09ba4426c",
+      "username": "admin",
+      "email": "destrepalorg2@gmail.com",
+      "passwordHash": "$2a$12$dT72pBJq5EPEsT3nSaP0ZeaiCJzK9JSQe0dN.ZvQtStwehUg7b1uO",
+      "role": "Пользователь",
+      "createdAt": "2026-04-27T09:18:24.781Z",
+      "hwid": null,
+      "sub": null,
+      "subExpires": null,
+      "avatar": null,
+      "banned": false,
+      "banReason": "",
+      "lastHwidReset": null
+    }
+  ],
+  "otps": [],
+  "pending": []
+}

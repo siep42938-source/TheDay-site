@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="space">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TheDay Client — Minecraft Client</title>
+  <meta http-equiv="X-Frame-Options" content="DENY"/>
+  <meta http-equiv="X-Content-Type-Options" content="nosniff"/>
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin"/>
+  <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"/>
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;"/>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" crossorigin="anonymous"/>
+</head>
+<body>
+
+<div class="page-transition" id="pageTransition"></div>
+<canvas id="spaceCanvas"></canvas>
+
+<!-- NAVBAR PILL -->
+<nav class="navbar" id="navbar">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <svg width="16" height="16" viewBox="0 0 18 18"><path d="M9 1L11.5 6.5H17L12.5 10L14.5 16L9 12.5L3.5 16L5.5 10L1 6.5H6.5L9 1Z" fill="#87CEEB"/></svg>
+      TheDay
+    </a>
+    <ul class="nav-links">
+      <li><a href="account.html">Аккаунт</a></li>
+      <li><a href="#buy">Покупка</a></li>
+      <li><a href="referrals.html">Рефералы</a></li>
+      <li><a href="#" class="nav-lang">RU</a></li>
+    </ul>
+    <a href="login.html" class="nav-user-icon" title="Войти">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    </a>
+    <div class="nav-burger" id="navBurger" onclick="toggleBurger()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      <div class="burger-dropdown" id="burgerDropdown">
+        <div>
+          <div class="bd-col-title">Общие</div>
+          <a href="#support" class="bd-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Поддержка
+          </a>
+          <a href="#" onclick="TD&&TD.openPanel();return false;" class="bd-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            Светлая тема
+          </a>
+          <a href="#" class="bd-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Заявка в медиа
+          </a>
+          <a href="login.html" class="bd-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Выйти
+          </a>
+        </div>
+        <div>
+          <div class="bd-col-title">Экосистема</div>
+          <a href="#cloud" class="bd-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            Облачные конфиги
+          </a>
+          <a href="admin.html" class="bd-item" style="color:#ef5350">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Админ-панель
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-content" data-aos="fade-up">
+    <div class="hero-badge">✦ Minecraft Client 2026</div>
+    <h1><span class="accent">TheDay</span> —<br/>простой путь<br/>к победе</h1>
+    <p>Мощный клиент, который не только улучшает ваши игровые навыки, но и позволяет доминировать на любом сервере Minecraft благодаря продвинутым функциям.</p>
+    <div class="hero-btns">
+      <a href="#buy" class="btn-primary">Купить продукт <span>→</span></a>
+      <a href="#support" class="btn-ghost">Поддержка</a>
+    </div>
+    <div class="hero-online">
+      <span class="hero-online-dot"></span>
+      <span id="onlineCount">847</span> игроков онлайн
+    </div>
+  </div>
+
+  <!-- BLACK HOLE CANVAS — занимает правую сторону -->
+  <div class="hero-canvas-side" data-aos="fade-left" data-aos-delay="200">
+    <canvas id="blackHoleCanvas"></canvas>
+  </div>
+</section>
+
+<!-- INTERACTIVE CLIENT DEMO — полная ширина под hero -->
+<section class="client-section" id="client-demo">
+  <div class="container">
+    <div class="client-window" data-aos="fade-up">
+      <!-- Музыкальный плеер -->
+      <div class="cw-player">
+        <div class="cwp-left">
+          <div class="cwp-cover">
+            <div class="cwp-cover-art"></div>
+          </div>
+          <div class="cwp-info">
+            <div class="cwp-title">Alien</div>
+            <div class="cwp-artist">@ilymeedy</div>
+          </div>
+          <div class="cwp-settings-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+          </div>
+        </div>
+        <div class="cwp-center">
+          <div class="cwp-progress-wrap">
+            <span class="cwp-time">2:10</span>
+            <div class="cwp-progress-bar">
+              <div class="cwp-progress-fill" id="playerProgress" style="width:47%"></div>
+              <div class="cwp-progress-thumb" style="left:47%"></div>
+            </div>
+            <span class="cwp-time">-2:35</span>
+          </div>
+          <div class="cwp-controls">
+            <button class="cwp-btn" onclick="playerPrev()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 20L9 12l10-8v16zM5 19V5h2v14H5z"/></svg>
+            </button>
+            <button class="cwp-btn cwp-play" id="playBtn" onclick="playerToggle()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" id="playIcon"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+            </button>
+            <button class="cwp-btn" onclick="playerNext()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M5 4l10 8-10 8V4zM19 5v14h-2V5h2z"/></svg>
+            </button>
+            <button class="cwp-btn cwp-share">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="cwp-right">
+          <div class="cwp-mini-info">
+            <span class="cwp-mini-label">Cooldowns</span>
+            <div class="cwp-mini-row">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span>Flatline</span>
+              <span class="cwp-mini-val">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Вкладки + поиск -->
+      <div class="cw-tabs-bar">
+        <div class="cw-tabs">
+          <button class="cw-tab active" data-ctab="visuals" onclick="switchClientTab(this,'visuals')">Visuals</button>
+          <button class="cw-tab" data-ctab="hud" onclick="switchClientTab(this,'hud')">HUD</button>
+          <button class="cw-tab" data-ctab="utilities" onclick="switchClientTab(this,'utilities')">Utilities</button>
+        </div>
+        <div class="cw-search-wrap">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input id="clientSearch" placeholder="Search" oninput="filterClientMods(this.value)"/>
+        </div>
+        <button class="cw-settings-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        </button>
+      </div>
+
+      <!-- Двухколоночный список модулей -->
+      <div class="cw-body">
+        <div class="cw-mods-grid" id="clientModsGrid">
+          <!-- заполняется JS -->
+        </div>
+
+        <!-- Hot Keys панель -->
+        <div class="cw-hotkeys" id="hotkeysPanel">
+          <div class="chk-title">
+            <div class="chk-dot"></div>
+            Hot Keys
+          </div>
+          <div class="chk-list" id="hotkeysList">
+            <!-- заполняется JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY -->
+<section class="why" id="docs">
+  <div class="container">
+    <div class="section-tag" data-aos="fade-up">ПОЧЕМУ THEDAY?</div>
+    <h2 data-aos="fade-up" data-aos-delay="50">Мы предоставляем только лучшие функции.</h2>
+    <p class="section-sub" data-aos="fade-up" data-aos-delay="100">постоянно растущий функционал с огромным количеством байтасов</p>
+    <div class="why-grid">
+      <div class="why-left" data-aos="fade-right">
+        <h3>буквально лучшая киллаура на рынке.<br/><span class="muted-text">настолько хороша, что прослезитесь.</span></h3>
+        <blockquote>«Это что-то невероятное, что-то новое в мире запрещённых читов на Minecraft, и не ожидал такого от этого нового клиента.»</blockquote>
+        <div class="quote-author"><strong>Twister</strong><br/><small>Minecraft YouTuber и Игрок</small></div>
+        <div class="why-btns">
+          <a href="#buy" class="btn-primary">Купить продукт →</a>
+          <a href="#" class="btn-ghost">Обзор Twister</a>
+        </div>
+      </div>
+      <div class="why-right" data-aos="fade-left" data-aos-delay="100">
+        <div class="glass-card preview-mini">
+          <div class="pm-row"><b>KillAura</b><span class="tag-blue">15 Тиков</span><div class="tog on"></div></div>
+          <div class="pm-label">Название настройки</div>
+          <div class="pm-desc">Полное описание настройки</div>
+          <div class="pm-label mt">Название лаунчера</div>
+          <div class="pm-colors">
+            <span style="background:#87CEEB"></span><span style="background:#4fc3f7"></span>
+            <span style="background:#0288d1"></span><span style="background:#01579b"></span>
+            <code>#90caf9</code>
+          </div>
+          <div class="pm-label mt">Название настройки</div>
+          <div class="pm-desc">Полное описание настройки</div>
+        </div>
+      </div>
+    </div>
+    <div class="feat-cards">
+      <div class="glass-card feat-card" data-aos="fade-up" data-aos-delay="0">
+        <div class="feat-num">01</div><div class="feat-arrow">↗</div>
+        <h4>Лучшие байпасы на всём рынке</h4>
+        <p>Огромное количество и качество встроенных байтасов точно не оставит вас разочарованным.</p>
+      </div>
+      <div class="glass-card feat-card" data-aos="fade-up" data-aos-delay="80">
+        <div class="feat-num">02</div><div class="feat-arrow">↗</div>
+        <h4>Обилие боевых функций</h4>
+        <p>Мы предоставляем огромную кастомизацию боевых функций, и мы уверены, что о нас вы никогда не пожалеете.</p>
+      </div>
+      <div class="glass-card feat-card" data-aos="fade-up" data-aos-delay="160">
+        <div class="feat-num">03</div><div class="feat-arrow">↗</div>
+        <h4>Красивый и удобный интерфейс</h4>
+        <p>Имея опыт и большое количество функций, мы продумали всё за вас.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CLOUD -->
+<section class="cloud" id="cloud">
+  <div class="container">
+    <div class="section-tag" data-aos="fade-up">МОМЕНТАЛЬНАЯ НАСТРОЙКА</div>
+    <h2 data-aos="fade-up" data-aos-delay="50">Облачные конфиги</h2>
+    <p class="section-sub" data-aos="fade-up" data-aos-delay="100">Делитесь конфигурациями с другими, заимствуйте конфиги других игроков</p>
+    <div class="cloud-grid">
+      <div class="glass-card cloud-item" data-aos="fade-up" data-aos-delay="0">
+        <div class="ci-icon" style="background:linear-gradient(135deg,#4fc3f7,#0288d1)">🔧</div>
+        <h4>Fabric API</h4><p>Разработан на базе Fabric API, что открывает огромные возможности для кастомизации.</p>
+      </div>
+      <div class="glass-card cloud-item" data-aos="fade-up" data-aos-delay="60">
+        <div class="ci-icon" style="background:linear-gradient(135deg,#ff7043,#e64a19)">⌨️</div>
+        <h4>Детальная система биндов</h4><p>Наша система биндов позволяет создать свой «оптимум». Параллельный настройки.</p>
+      </div>
+      <div class="glass-card cloud-item" data-aos="fade-up" data-aos-delay="120">
+        <div class="ci-icon" style="background:linear-gradient(135deg,#ef5350,#b71c1c)">🛡️</div>
+        <h4>Качественная техподдержка</h4><p>Наша команда всегда готова помочь вам с любыми вопросами 24/7.</p>
+      </div>
+      <div class="glass-card cloud-item" data-aos="fade-up" data-aos-delay="180">
+        <div class="ci-icon" style="background:linear-gradient(135deg,#66bb6a,#2e7d32)">💬</div>
+        <h4>Встроенный чат</h4><p>Общайтесь с пользователями, обменивайтесь информацией, скидывайте команды.</p>
+      </div>
+      <div class="glass-card cloud-item" data-aos="fade-up" data-aos-delay="240">
+        <div class="ci-icon" style="background:linear-gradient(135deg,#29b6f6,#0277bd)">⚙️</div>
+        <h4>Точная оптимизация</h4><p>Клиент работает без тормозов даже на слабых системах.</p>
+      </div>
+      <div class="glass-card cloud-item" data-aos="fade-up" data-aos-delay="300">
+        <div class="ci-icon" style="background:linear-gradient(135deg,#26c6da,#00838f)">🎨</div>
+        <h4>Детальная кастомизация UI</h4><p>Полный контроль над внешним видом интерфейса под свой стиль.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES GRID (с иконками) -->
+<section class="features-section" id="features">
+  <div class="container">
+    <div class="section-tag" data-aos="fade-up">ПРЕИМУЩЕСТВА</div>
+    <h2 data-aos="fade-up" data-aos-delay="50">Преимущества нашего мода</h2>
+    <p class="section-sub" data-aos="fade-up" data-aos-delay="100">Наш мод открывает доступ к мощному набору функций, которые выводят комфорт и стиль игры на новый уровень</p>
+    <div class="features-grid">
+      <div class="feature-item" data-aos="fade-up" data-aos-delay="0">
+        <div class="fi-icon">🚀</div>
+        <h4>Дизайн</h4>
+        <p>Наслаждайтесь игрой с элегантным минималистичным интерфейсом.</p>
+      </div>
+      <div class="feature-item" data-aos="fade-up" data-aos-delay="60">
+        <div class="fi-icon">⚡</div>
+        <h4>Производительность</h4>
+        <p>Оптимизированный код позволяет достичь высокого FPS даже на слабых компьютерах.</p>
+      </div>
+      <div class="feature-item" data-aos="fade-up" data-aos-delay="120">
+        <div class="fi-icon">⚔️</div>
+        <h4>PvP преимущества</h4>
+        <p>Получите преимущество в бою с помощью специальных настроек и функций для PvP.</p>
+      </div>
+      <div class="feature-item" data-aos="fade-up" data-aos-delay="180">
+        <div class="fi-icon">🎛️</div>
+        <h4>Гибкие настройки</h4>
+        <p>Настройте мод под себя с помощью множества параметров и опций с удобным интерфейсом.</p>
+      </div>
+      <div class="feature-item" data-aos="fade-up" data-aos-delay="240">
+        <div class="fi-icon">🛡️</div>
+        <h4>Анти-чит</h4>
+        <p>Наш мод полностью совместим с популярными анти-чит системами на серверах.</p>
+      </div>
+      <div class="feature-item" data-aos="fade-up" data-aos-delay="300">
+        <div class="fi-icon">🔄</div>
+        <h4>Регулярные обновления</h4>
+        <p>Мы постоянно улучшаем и обновляем наш мод, добавляя новые функции.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPARE SLIDER -->
+<section class="compare-section" id="compare">
+  <div class="container">
+    <div class="section-tag" data-aos="fade-up">ВИЗУАЛ</div>
+    <h2 data-aos="fade-up" data-aos-delay="50">Играй по-своему</h2>
+    <p class="section-sub" data-aos="fade-up" data-aos-delay="100">Выбирай: сочный HD-дизайн клиента или мрачная классика Minecraft.<br/>Решение за тобой — всегда.</p>
+    <div class="compare-wrap" data-aos="zoom-in" data-aos-delay="100">
+      <div class="compare-slider" id="compareSlider">
+        <div class="compare-before">
+          <div class="compare-label compare-label-left">Vanilla</div>
+          <div class="compare-bg compare-bg-before"></div>
+        </div>
+        <div class="compare-after">
+          <div class="compare-label compare-label-right">TheDay</div>
+          <div class="compare-bg compare-bg-after"></div>
+        </div>
+        <div class="compare-handle" id="compareHandle">
+          <div class="compare-handle-line"></div>
+          <div class="compare-handle-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GALLERY -->
+<section class="gallery-section" id="gallery">
+  <div class="container">
+    <div class="section-tag" data-aos="fade-up">ГАЛЕРЕЯ</div>
+    <h2 data-aos="fade-up" data-aos-delay="50">Обзор интерфейса клиента</h2>
+    <p class="section-sub" data-aos="fade-up" data-aos-delay="100">Пять реальных экранов интерфейса с плавным переключением</p>
+    <div class="gallery-wrap" data-aos="fade-up" data-aos-delay="150">
+      <div class="gallery-main" id="galleryMain">
+        <div class="gallery-slide active" data-idx="0">
+          <div class="gallery-mockup">
+            <div class="gm-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span style="font-size:10px;color:var(--muted);margin-left:8px">TheDay Client — KillAura</span></div>
+            <div class="gm-body">
+              <div class="gm-modules">
+                <div class="gm-mod active">KillAura <span class="gm-badge on">ON</span></div>
+                <div class="gm-mod">Velocity <span class="gm-badge">OFF</span></div>
+                <div class="gm-mod">AutoClicker <span class="gm-badge">OFF</span></div>
+                <div class="gm-mod active">Criticals <span class="gm-badge on">ON</span></div>
+                <div class="gm-mod">AimAssist <span class="gm-badge">OFF</span></div>
+                <div class="gm-mod active">Sprint <span class="gm-badge on">ON</span></div>
+              </div>
+              <div class="gm-settings">
+                <div class="gm-setting-title">KillAura</div>
+                <div class="gm-row"><span>Дальность</span><span class="gm-val">3.5</span></div>
+                <div class="gm-slider"><div class="gm-slider-fill" style="width:58%"></div></div>
+                <div class="gm-row"><span>CPS</span><span class="gm-val">12</span></div>
+                <div class="gm-slider"><div class="gm-slider-fill" style="width:60%"></div></div>
+                <div class="gm-row"><span>Режим</span><span class="gm-val accent">Multi</span></div>
+                <div class="gm-row"><span>Через блоки</span><div class="tog"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="gallery-slide" data-idx="1">
+          <div class="gallery-mockup">
+            <div class="gm-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span style="font-size:10px;color:var(--muted);margin-left:8px">TheDay Client — Visual</span></div>
+            <div class="gm-body">
+              <div class="gm-modules">
+                <div class="gm-mod active">ESP <span class="gm-badge on">ON</span></div>
+                <div class="gm-mod">Tracers <span class="gm-badge">OFF</span></div>
+                <div class="gm-mod active">FullBright <span class="gm-badge on">ON</span></div>
+                <div class="gm-mod">Chams <span class="gm-badge">OFF</span></div>
+                <div class="gm-mod">Xray <span class="gm-badge">OFF</span></div>
+                <div class="gm-mod active">NoHurtCam <span class="gm-badge on">ON</span></div>
+              </div>
+              <div class="gm-settings">
+                <div class="gm-setting-title">ESP</div>
+                <div class="gm-row"><span>Режим</span><span class="gm-val accent">Box</span></div>
+                <div class="gm-row"><span>Игроки</span><div class="tog on"></div></div>
+                <div class="gm-row"><span>Мобы</span><div class="tog"></div></div>
+                <div class="gm-row"><span>Цвет</span><div style="display:flex;gap:4px"><span style="width:12px;height:12px;border-radius:50%;background:#87CEEB;display:block"></span><span style="width:12px;height:12px;border-radius:50%;background:#4fc3f7;display:block"></span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="gallery-slide" data-idx="2">
+          <div class="gallery-mockup">
+            <div class="gm-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span style="font-size:10px;color:var(--muted);margin-left:8px">TheDay Client — Movement</span></div>
+            <div class="gm-body">
+              <div class="gm-modules">
+                <div class="gm-mod">Speed <span class="gm-badge">OFF</span></div>
+                <div class="gm-mod">Fly <span class="gm-badge">OFF</span></div>
+                <div class="gm-mod active">Sprint <span class="gm-badge on">ON</span></div>
+                <div class="gm-mod active">NoFall <span class="gm-badge on">ON</span></div>
+                <div class="gm-mod">Scaffold <span class="gm-badge">OFF</span></div>
+                <div class="gm-mod">Parkour <span class="gm-badge">OFF</span></div>
+              </div>
+              <div class="gm-settings">
+                <div class="gm-setting-title">Sprint</div>
+                <div class="gm-row"><span>Всегда</span><div class="tog on"></div></div>
+                <div class="gm-setting-title" style="margin-top:12px">NoFall</div>
+                <div class="gm-row"><span>Режим</span><span class="gm-val accent">Packet</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="gallery-slide" data-idx="3">
+          <div class="gallery-mockup">
+            <div class="gm-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span style="font-size:10px;color:var(--muted);margin-left:8px">TheDay Client — HUD</span></div>
+            <div class="gm-body">
+              <div class="gm-modules">
+                <div class="gm-mod active">Watermark <span class="gm-badge on">ON</span></div>
+                <div class="gm-mod active">Arraylist <span class="gm-badge on">ON</span></div>
+                <div class="gm-mod active">FPS Counter <span class="gm-badge on">ON</span></div>
+                <div class="gm-mod">Coords <span class="gm-badge">OFF</span></div>
+                <div class="gm-mod active">Armor HUD <span class="gm-badge on">ON</span></div>
+                <div class="gm-mod">Ping <span class="gm-badge">OFF</span></div>
+              </div>
+              <div class="gm-settings">
+                <div class="gm-setting-title">Arraylist</div>
+                <div class="gm-row"><span>Позиция</span><span class="gm-val accent">Справа</span></div>
+                <div class="gm-row"><span>Размер</span><span class="gm-val">14px</span></div>
+                <div class="gm-slider"><div class="gm-slider-fill" style="width:45%"></div></div>
+                <div class="gm-row"><span>Тень</span><div class="tog on"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="gallery-slide" data-idx="4">
+          <div class="gallery-mockup">
+            <div class="gm-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span style="font-size:10px;color:var(--muted);margin-left:8px">TheDay Client — Config</span></div>
+            <div class="gm-body">
+              <div class="gm-modules">
+                <div class="gm-mod active">Flatline PvP <span class="gm-badge on">★</span></div>
+                <div class="gm-mod">Default <span class="gm-badge">—</span></div>
+                <div class="gm-mod">HCF Setup <span class="gm-badge">—</span></div>
+                <div class="gm-mod">Crystal PvP <span class="gm-badge">—</span></div>
+                <div class="gm-mod">Bedwars <span class="gm-badge">—</span></div>
+                <div class="gm-mod">Skywars <span class="gm-badge">—</span></div>
+              </div>
+              <div class="gm-settings">
+                <div class="gm-setting-title">Flatline PvP</div>
+                <div class="gm-row"><span>Автор</span><span class="gm-val accent">Flatline</span></div>
+                <div class="gm-row"><span>Версия</span><span class="gm-val">2.1</span></div>
+                <div class="gm-row"><span>Рейтинг</span><span class="gm-val">★★★★★</span></div>
+                <div style="margin-top:10px"><button style="background:linear-gradient(135deg,var(--a2),var(--a3));border:none;color:#fff;padding:6px 14px;border-radius:20px;font-size:11px;cursor:pointer;font-family:inherit">Применить</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="gallery-dots" id="galleryDots">
+        <button class="gdot active" onclick="goSlide(0)"></button>
+        <button class="gdot" onclick="goSlide(1)"></button>
+        <button class="gdot" onclick="goSlide(2)"></button>
+        <button class="gdot" onclick="goSlide(3)"></button>
+        <button class="gdot" onclick="goSlide(4)"></button>
+      </div>
+      <div class="gallery-nav">
+        <button class="gnav-btn" onclick="prevSlide()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="gnav-counter"><span id="slideNum">1</span> / 5</span>
+        <button class="gnav-btn" onclick="nextSlide()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="buy">
+  <div class="container">
+    <div class="section-tag" data-aos="fade-up">ЦЕНЫ</div>
+    <h2 data-aos="fade-up" data-aos-delay="50">Простые и прозрачные цены</h2>
+    <p class="section-sub" data-aos="fade-up" data-aos-delay="100">Выберите подходящий тариф</p>
+    <div class="pricing-grid">
+      <div class="glass-card price-card" data-aos="fade-up" data-aos-delay="0">
+        <div class="price-days">7 дней</div>
+        <div class="price-amount" data-val="100">100₽</div>
+        <ul><li><span class="check">✓</span>Полный функционал</li><li><span class="check">✓</span>Все обновления</li><li><span class="check">✓</span>Поддержка 24/7</li></ul>
+        <a href="login.html" class="btn-outline">Купить сейчас</a>
+      </div>
+      <div class="glass-card price-card popular" data-aos="fade-up" data-aos-delay="80">
+        <div class="popular-badge">⭐ Популярный</div>
+        <div class="price-days">30 дней</div>
+        <div class="price-amount" data-val="200">200₽</div>
+        <ul><li><span class="check">✓</span>Полный функционал</li><li><span class="check">✓</span>Все обновления</li><li><span class="check">✓</span>Поддержка 24/7</li></ul>
+        <a href="login.html" class="btn-primary" style="display:block;text-align:center;margin-top:20px;border-radius:30px">Купить сейчас</a>
+      </div>
+      <div class="glass-card price-card" data-aos="fade-up" data-aos-delay="160">
+        <div class="popular-badge green">🎁 Бесплатный Spray</div>
+        <div class="price-days">90 дней</div>
+        <div class="price-amount" data-val="400">400₽</div>
+        <ul><li><span class="check">✓</span>Полный функционал</li><li><span class="check">✓</span>Все обновления</li><li><span class="check">✓</span>Поддержка 24/7</li><li><span class="check">✓</span>+1 Spray HWD</li></ul>
+        <a href="login.html" class="btn-outline">Купить сейчас</a>
+      </div>
+      <div class="glass-card price-card" data-aos="fade-up" data-aos-delay="240">
+        <div class="popular-badge green">🎁 x2 Spray · Навсегда</div>
+        <div class="price-days">Навсегда</div>
+        <div class="price-amount" data-val="600">600₽</div>
+        <ul><li><span class="check">✓</span>Полный функционал</li><li><span class="check">✓</span>Все обновления</li><li><span class="check">✓</span>Поддержка 24/7</li><li><span class="check">✓</span>+2 Spray HWD</li></ul>
+        <a href="login.html" class="btn-outline">Купить сейчас</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section" id="support">
+  <div class="container">
+    <div class="cta-box" data-aos="zoom-in">
+      <h2>Играй по-другому<br/><span>с TheDay</span></h2>
+      <p>Попробовав наш клиент, мы можем с уверенностью сказать, что вы больше не захотите покупки другого продукта</p>
+      <div class="cta-btns">
+        <a href="#" class="btn-ghost">Связаться с поддержкой ↗</a>
+        <a href="login.html" class="btn-primary-dark">Купить продукт ↗</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-col">
+      <a href="index.html" class="nav-logo" style="margin-bottom:10px">
+        <svg width="16" height="16" viewBox="0 0 18 18"><path d="M9 1L11.5 6.5H17L12.5 10L14.5 16L9 12.5L3.5 16L5.5 10L1 6.5H6.5L9 1Z" fill="#87CEEB"/></svg>
+        TheDay
+      </a>
+      <p>Самый мощный Minecraft клиент на рынке.</p>
+      <div class="footer-socials">
+        <a href="https://discord.gg/yRjfZ3Jvv" class="footer-social" title="Discord" target="_blank" rel="noopener">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+        </a>
+        <a href="#" class="footer-social" title="Telegram">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+        </a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <div class="footer-heading">ПРОДУКТ</div>
+      <a href="#">Скачать</a>
+      <a href="#buy">Купить</a>
+      <a href="#support">Поддержка</a>
+      <a href="referrals.html">Рефералы</a>
+    </div>
+    <div class="footer-col">
+      <div class="footer-heading">ДОКУМЕНТЫ</div>
+      <a href="docs.html">Пользовательское соглашение</a>
+      <a href="docs.html">Политика конфиденциальности</a>
+      <a href="docs.html">Политика возврата</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div>
+      <div>© 2026 — TheDay. Все права защищены.</div>
+      <div style="font-size:11px;color:rgba(74,85,104,0.5);margin-top:4px">ИП Иванов Иван Иванович | ИНН 123456789012 | thedayclient.su</div>
+    </div>
+    <div class="footer-bottom-right">
+      <a href="https://discord.gg/yRjfZ3Jvv" class="footer-bottom-link" target="_blank" rel="noopener"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+        Discord
+      </a>
+      <a href="#" class="footer-bottom-link">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+        Telegram
+      </a>
+    </div>
+  </div>
+</footer>
+
+<script src="api.js"></script><script src="auth.js"></script><script src="smooth.js"></script><script src="theme.js"></script><script src="main.js"></script>
+</body>
+</html>
