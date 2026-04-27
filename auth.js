@@ -14,7 +14,10 @@ const Auth = {
       return this._serverCache;
     }
     try {
-      const r = await fetch('/api/health', { signal: AbortSignal.timeout(2000) });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const r = await fetch('/api/health', { signal: controller.signal });
+      clearTimeout(timeoutId);
       this._serverCache = r.ok;
     } catch {
       this._serverCache = false;

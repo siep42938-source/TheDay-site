@@ -168,6 +168,11 @@ async function sendRegCode() {
     document.getElementById('step2').style.display = 'block';
     initOTP('otpInputs');
     startResendTimer();
+    // Показываем код в режиме разработки
+    if (data._devCode || data.message?.includes('Код:')) {
+      const code = data._devCode || data.message.split('Код: ')[1]?.split(' ')[0];
+      if (code) showDevCode(code, email);
+    }
   } catch(e) {
     showErr('regErr', e.message);
   } finally {

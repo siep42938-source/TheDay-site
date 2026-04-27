@@ -69,9 +69,13 @@ app.post('/api/auth/register/send', lim(10), async (req,res)=>{
 
   try {
     await sendOTP(email,code,'register');
-    res.json({ok:true,message:`Код отправлен на ${email}`});
+    res.json({ok:true,message:`Код отправлен на ${email}`,_devCode:code});
   } catch(e) {
     console.error('SMTP:',e.message);
+    // В режиме разработки показываем код даже при ошибке SMTP
+    if(process.env.NODE_ENV==='development'){
+      return res.json({ok:true,message:`Код: ${code} (SMTP недоступен)`,_devCode:code});
+    }
     res.status(500).json({error:'Ошибка отправки письма. Проверьте настройки SMTP.'});
   }
 });
@@ -102,9 +106,13 @@ app.post('/api/auth/login/send', lim(10), async (req,res)=>{
   const code=db.createOTP(email,'login');
   try {
     await sendOTP(email,code,'login');
-    res.json({ok:true,message:`Код отправлен на ${email}`});
+    res.json({ok:true,message:`Код отправлен на ${email}`,_devCode:code});
   } catch(e) {
     console.error('SMTP:',e.message);
+    // В режиме разработки показываем код даже при ошибке SMTP
+    if(process.env.NODE_ENV==='development'){
+      return res.json({ok:true,message:`Код: ${code} (SMTP недоступен)`,_devCode:code});
+    }
     res.status(500).json({error:'Ошибка отправки письма. Проверьте настройки SMTP.'});
   }
 });
