@@ -15,8 +15,8 @@ const Auth = {
     }
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
-      const r = await fetch('/api/health', { signal: controller.signal });
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const r = await fetch('https://the-day-site-ovk7.vercel.app/api/health', { signal: controller.signal });
       clearTimeout(timeoutId);
       this._serverCache = r.ok;
     } catch {

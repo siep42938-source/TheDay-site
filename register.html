@@ -162,32 +162,13 @@ async function sendRegCode() {
 
   setLoading('regBtn','regSpinner','regBtnText', true, 'Отправка...');
   try {
-    let data;
-    try {
-      // Пробуем серверный режим
-      const serverOk = await Auth.hasServer();
-      if (serverOk) {
-        data = await apiPost('/auth/register/send', { username, email, password });
-      } else {
-        throw new Error('Server not available');
-      }
-    } catch (serverError) {
-      // Если сервер недоступен — используем локальный режим
-      console.log('Переключение на локальный режим:', serverError.message);
-      data = await Auth.registerSend({ username, email, password });
-    }
-
+    const data = await apiPost('/auth/register/send', { username, email, password });
     regEmail = email;
     document.getElementById('otpSubtext').textContent = `Код отправлен на ${email}`;
     document.getElementById('step1').style.display = 'none';
     document.getElementById('step2').style.display = 'block';
     initOTP('otpInputs');
     startResendTimer();
-    // Показываем код в режиме разработки
-    if (data._devCode || data.message?.includes('Код:')) {
-      const code = data._devCode || data.message.split('Код: ')[1]?.split(' ')[0];
-      if (code) showDevCode(code, email);
-    }
   } catch(e) {
     showErr('regErr', e.message);
   } finally {
@@ -202,22 +183,9 @@ async function verifyRegCode() {
 
   setLoading('otpBtn','otpSpinner','otpBtnText', true, 'Создание...');
   try {
-    let data;
-    try {
-      // Пробуем серверный режим
-      const serverOk = await Auth.hasServer();
-      if (serverOk) {
-        data = await apiPost('/auth/register/verify', { email: regEmail, code });
-        localStorage.setItem('td_token', data.token);
-        localStorage.setItem('td_user', JSON.stringify(data.user));
-      } else {
-        throw new Error('Server not available');
-      }
-    } catch (serverError) {
-      // Если сервер недоступен — используем локальный режим
-      console.log('Переключение на локальный режим:', serverError.message);
-      data = await Auth.registerVerify({ email: regEmail, code });
-    }
+    const data = await apiPost('/auth/register/verify', { email: regEmail, code });
+    localStorage.setItem('td_token', data.token);
+    localStorage.setItem('td_user', JSON.stringify(data.user));
     window.location.href = 'account.html';
   } catch(e) {
     showErr('otpErr', e.message);
@@ -231,18 +199,8 @@ async function resendCode() {
   try {
     const username = document.getElementById('regUser').value.trim();
     const password = document.getElementById('regPass').value;
-    const serverOk = await Auth.hasServer();
-    let data;
-    if (serverOk) {
-      data = await apiPost('/auth/register/send', { username, email: regEmail, password });
-    } else {
-      data = await Auth.registerSend({ username, email: regEmail, password });
-    }
+    await apiPost('/auth/register/send', { username, email: regEmail, password });
     startResendTimer();
-    if (data._devCode || data.message?.includes('Код:')) {
-      const code = data._devCode || data.message.split('Код: ')[1];
-      if (code) showDevCode(code, regEmail);
-    }
   } catch(e) { showErr('otpErr', e.message); }
 }
 

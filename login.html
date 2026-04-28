@@ -142,6 +142,10 @@ async function apiPost(path, body) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
+  const contentType = r.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    throw new Error('Сервер недоступен');
+  }
   const d = await r.json();
   if (!r.ok) throw new Error(d.error || 'Ошибка сервера');
   return d;
@@ -187,14 +191,7 @@ async function sendLoginCode() {
 
   setLoading('loginBtn','loginSpinner','loginBtnText', true, 'Отправка...');
   try {
-    // Пробуем серверный режим
-    const serverOk = await Auth.hasServer();
-    let data;
-    if (serverOk) {
-      data = await apiPost('/auth/login/send', { email, password: pass });
-    } else {
-      data = await Auth.loginSend({ email, password: pass });
-    }
+    await apiPost('/auth/login/send', { email, password: pass });
     loginEmail = email;
     document.getElementById('otpSubtext').textContent = `Код отправлен на ${email}`;
     document.getElementById('step1').style.display = 'none';
@@ -215,15 +212,9 @@ async function verifyLoginCode() {
 
   setLoading('otpBtn','otpSpinner','otpBtnText', true, 'Проверка...');
   try {
-    const serverOk = await Auth.hasServer();
-    let data;
-    if (serverOk) {
-      data = await apiPost('/auth/login/verify', { email: loginEmail, code });
-      localStorage.setItem('td_token', data.token);
-      localStorage.setItem('td_user', JSON.stringify(data.user));
-    } else {
-      data = await Auth.loginVerify({ email: loginEmail, code });
-    }
+    const data = await apiPost('/auth/login/verify', { email: loginEmail, code });
+    localStorage.setItem('td_token', data.token);
+    localStorage.setItem('td_user', JSON.stringify(data.user));
     window.location.href = 'account.html';
   } catch(e) {
     showErr('otpErr', e.message);
