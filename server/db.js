@@ -1,235 +1,227 @@
-const fs = require('fs');
-const path = require('path');
+const { Redis } = require('@upstash/redis');
 const { v4: uuidv4 } = require('uuid');
-const DB_FILE = path.join(__dirname, 'db.json');
 
-function load() {
-  try { if (fs.existsSync(DB_FILE)) return JSON.parse(fs.readFileSync(DB_FILE,'utf8')); }
-  catch(e) { console.error('DB load error:', e.message); }
-  return { users:[], otps:[], pending:[] };
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL,
+  token: process.env.KV_REST_API_TOKEN,
+});
+
+// ── Хелперы ───────────────────────────────────────────────
+async function getUsers() {
+  const ids = await redis.smembers('users:ids') || [];
+  if (!ids.length) return [];
+  const users = await Promise.all(ids.map(id => redis.hgetall(`user:${id}`)));
+  return users.filter(Boolean).map(u => ({
+    ...u,
+    balance: Number(u.balance || 0),
+    balanceTotalIn: Number(u.balanceTotalIn || 0),
+    balanceTotalOut: Number(u.balanceTotalOut || 0),
+    balanceHistory: u.balanceHistory ? JSON.parse(u.balanceHistory) : [],
+    banned: u.banned === 'true',
+  }));
 }
 
-let _saveTimer = null;
-function save(db) {
-  // Debounce writes — не более 1 записи в 200мс
-  clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(() => {
-    try {
-      const tmp = DB_FILE + '.tmp';
-      fs.writeFileSync(tmp, JSON.stringify(db, null, 2));
-      fs.renameSync(tmp, DB_FILE);
-    } catch(e) { console.error('DB save error:', e.message); }
-  }, 200);
+async function saveUser(user) {
+  const data = { ...user };
+  if (Array.isArray(data.balanceHistory)) data.balanceHistory = JSON.stringify(data.balanceHistory);
+  data.banned = String(data.banned || false);
+  data.balance = String(data.balance || 0);
+  data.balanceTotalIn = String(data.balanceTotalIn || 0);
+  data.balanceTotalOut = String(data.balanceTotalOut || 0);
+  await redis.hset(`user:${user.id}`, data);
+  await redis.sadd('users:ids', user.id);
+  // Индексы для быстрого поиска
+  await redis.set(`idx:email:${user.email.toLowerCase()}`, user.id);
+  await redis.set(`idx:username:${user.username.toLowerCase()}`, user.id);
+  if (user.telegramId) await redis.set(`idx:tg:${user.telegramId}`, user.id);
+  return user;
 }
 
-let _db = load();
-
+// ── DB API ────────────────────────────────────────────────
 const db = {
-  getAllUsers: () => [..._db.users],
-  findUserByEmail: (email) => _db.users.find(u=>u.email.toLowerCase()===email.toLowerCase())||null,
-  findUserById: (id) => _db.users.find(u=>u.id===id)||null,
-  findUserByUsername: (username) => _db.users.find(u=>u.username.toLowerCase()===username.toLowerCase())||null,
+  async getAllUsers() { return getUsers(); },
 
-  createUser({ username, email, passwordHash }) {
+  async findUserByEmail(email) {
+    if (!email) return null;
+    const id = await redis.get(`idx:email:${email.toLowerCase()}`);
+    if (!id) return null;
+    return db.findUserById(id);
+  },
+
+  async findUserById(id) {
+    if (!id) return null;
+    const u = await redis.hgetall(`user:${id}`);
+    if (!u) return null;
+    return {
+      ...u,
+      balance: Number(u.balance || 0),
+      balanceTotalIn: Number(u.balanceTotalIn || 0),
+      balanceTotalOut: Number(u.balanceTotalOut || 0),
+      balanceHistory: u.balanceHistory ? JSON.parse(u.balanceHistory) : [],
+      banned: u.banned === 'true',
+    };
+  },
+
+  async findUserByUsername(username) {
+    if (!username) return null;
+    const id = await redis.get(`idx:username:${username.toLowerCase()}`);
+    if (!id) return null;
+    return db.findUserById(id);
+  },
+
+  async findUserByTelegramId(telegramId) {
+    if (!telegramId) return null;
+    const id = await redis.get(`idx:tg:${telegramId}`);
+    if (!id) return null;
+    return db.findUserById(id);
+  },
+
+  async createUser({ username, email, passwordHash }) {
     const user = {
       id: uuidv4(), username, email: email.toLowerCase(), passwordHash,
-      role:'Пользователь', createdAt: new Date().toISOString(),
-      hwid:null, sub:null, subExpires:null, avatar:null,
-      banned:false, banReason:'', lastHwidReset:null,
-      telegramId:null, telegramUsername:null,
-      balance:0, balanceTotalIn:0, balanceTotalOut:0,
-      balanceHistory:[],
+      role: 'Пользователь', createdAt: new Date().toISOString(),
+      hwid: '', sub: '', subExpires: '', avatar: '',
+      banned: false, banReason: '', lastHwidReset: '',
+      telegramId: '', telegramUsername: '',
+      balance: 0, balanceTotalIn: 0, balanceTotalOut: 0, balanceHistory: [],
     };
-    _db.users.push(user); save(_db); return user;
+    await saveUser(user);
+    return user;
   },
 
-  updateUser(id, updates) {
-    const i = _db.users.findIndex(u=>u.id===id);
-    if(i===-1) return null;
-    _db.users[i] = {..._db.users[i], ...updates};
-    save(_db); return _db.users[i];
+  async updateUser(id, updates) {
+    const u = await db.findUserById(id);
+    if (!u) return null;
+    const merged = { ...u, ...updates };
+    await saveUser(merged);
+    return merged;
   },
 
-  deleteUser(id) {
-    const i = _db.users.findIndex(u=>u.id===id);
-    if(i===-1) return false;
-    _db.users.splice(i,1); save(_db); return true;
+  async deleteUser(id) {
+    const u = await db.findUserById(id);
+    if (!u) return false;
+    await redis.del(`user:${id}`);
+    await redis.srem('users:ids', id);
+    await redis.del(`idx:email:${u.email}`);
+    await redis.del(`idx:username:${u.username.toLowerCase()}`);
+    if (u.telegramId) await redis.del(`idx:tg:${u.telegramId}`);
+    return true;
   },
 
-  createOTP(email, type) {
-    _db.otps = _db.otps.filter(o=>!(o.email===email.toLowerCase()&&o.type===type));
-    const code = String(Math.floor(100000+Math.random()*900000));
-    const mins = parseInt(process.env.OTP_EXPIRES_MIN||'10');
-    _db.otps.push({ email:email.toLowerCase(), code, type, expiresAt:new Date(Date.now()+mins*60000).toISOString(), attempts:0 });
-    save(_db); return code;
+  // ── OTP ──────────────────────────────────────────────────
+  async createOTP(email, type) {
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const mins = parseInt(process.env.OTP_EXPIRES_MIN || '10');
+    const key = `otp:${email.toLowerCase()}:${type}`;
+    await redis.set(key, JSON.stringify({ code, attempts: 0 }), { ex: mins * 60 });
+    return code;
   },
 
-  verifyOTP(email, code, type) {
-    const otp = _db.otps.find(o=>o.email===email.toLowerCase()&&o.type===type);
-    if(!otp) return {ok:false, reason:'Код не найден или уже использован'};
-    if(new Date(otp.expiresAt)<new Date()) {
-      _db.otps=_db.otps.filter(o=>o!==otp); save(_db);
-      return {ok:false, reason:'Код истёк. Запросите новый.'};
-    }
-    otp.attempts++;
-    if(otp.attempts>5) { _db.otps=_db.otps.filter(o=>o!==otp); save(_db); return {ok:false,reason:'Слишком много попыток'}; }
-    if(otp.code!==String(code)) { save(_db); return {ok:false,reason:'Неверный код'}; }
-    _db.otps=_db.otps.filter(o=>o!==otp); save(_db); return {ok:true};
+  async verifyOTP(email, code, type) {
+    const key = `otp:${email.toLowerCase()}:${type}`;
+    const raw = await redis.get(key);
+    if (!raw) return { ok: false, reason: 'Код не найден или уже использован' };
+    const otp = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    otp.attempts = (otp.attempts || 0) + 1;
+    if (otp.attempts > 5) { await redis.del(key); return { ok: false, reason: 'Слишком много попыток' }; }
+    if (otp.code !== String(code)) { await redis.set(key, JSON.stringify(otp), { ex: 600 }); return { ok: false, reason: 'Неверный код' }; }
+    await redis.del(key);
+    return { ok: true };
   },
 
-  savePending(email, data) {
-    _db.pending=_db.pending.filter(p=>p.email!==email.toLowerCase());
-    _db.pending.push({email:email.toLowerCase(),...data, expiresAt:new Date(Date.now()+15*60000).toISOString()});
-    save(_db);
-  },
-  getPending(email) {
-    const p=_db.pending.find(p=>p.email===email.toLowerCase());
-    if(!p||new Date(p.expiresAt)<new Date()) return null;
-    return p;
-  },
-  deletePending(email) { _db.pending=_db.pending.filter(p=>p.email!==email.toLowerCase()); save(_db); },
-
-  cleanExpired() {
-    const now=new Date();
-    _db.otps=_db.otps.filter(o=>new Date(o.expiresAt)>now);
-    _db.pending=_db.pending.filter(p=>new Date(p.expiresAt)>now);
-    if(_db.keys) _db.keys=_db.keys.filter(k=>new Date(k.expiresAt)>now);
-    if(_db.tgLinkTokens) _db.tgLinkTokens=_db.tgLinkTokens.filter(t=>new Date(t.expiresAt)>now);
-    save(_db);
+  // ── Pending ───────────────────────────────────────────────
+  async savePending(email, data) {
+    await redis.set(`pending:${email.toLowerCase()}`, JSON.stringify(data), { ex: 900 });
   },
 
-  // Система ключей активации
-  createKey(type, days) {
-    if(!_db.keys) _db.keys = [];
+  async getPending(email) {
+    const raw = await redis.get(`pending:${email.toLowerCase()}`);
+    if (!raw) return null;
+    return typeof raw === 'string' ? JSON.parse(raw) : raw;
+  },
+
+  async deletePending(email) {
+    await redis.del(`pending:${email.toLowerCase()}`);
+  },
+
+  // ── Ключи ─────────────────────────────────────────────────
+  async createKey(type, days) {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    const rand = (n) => Array.from({length:n}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+    const rand = n => Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     const key = `THEDAY-${type.toUpperCase()}-${rand(4)}-${rand(4)}`;
-    const keyData = {
-      key,
-      type,
-      days,
-      used: false,
-      usedBy: null,
-      usedAt: null,
-      createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 24*60*60*1000).toISOString() // 24 часа
-    };
-    _db.keys.push(keyData);
-    save(_db);
+    const data = { key, type, days: String(days), used: 'false', usedBy: '', usedAt: '', createdAt: new Date().toISOString() };
+    await redis.set(`key:${key}`, JSON.stringify(data), { ex: 86400 });
+    await redis.sadd('keys:all', key);
     return key;
   },
 
-  useKey(key, userId) {
-    if(!_db.keys) _db.keys = [];
-    const keyData = _db.keys.find(k => k.key === key.trim().toUpperCase());
-    if(!keyData) return {ok:false, reason:'Ключ не найден'};
-    if(keyData.used) return {ok:false, reason:'Ключ уже использован'};
-    if(new Date(keyData.expiresAt) < new Date()) {
-      return {ok:false, reason:'Ключ истёк (действителен 24 часа)'};
-    }
-    keyData.used = true;
-    keyData.usedBy = userId;
-    keyData.usedAt = new Date().toISOString();
-    save(_db);
-    return {ok:true, days: keyData.days, type: keyData.type};
+  async useKey(key, userId) {
+    const k = key.trim().toUpperCase();
+    const raw = await redis.get(`key:${k}`);
+    if (!raw) return { ok: false, reason: 'Ключ не найден' };
+    const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (data.used === 'true' || data.used === true) return { ok: false, reason: 'Ключ уже использован' };
+    data.used = 'true'; data.usedBy = userId; data.usedAt = new Date().toISOString();
+    await redis.set(`key:${k}`, JSON.stringify(data), { ex: 86400 });
+    return { ok: true, days: Number(data.days), type: data.type };
   },
 
-  getAllKeys() {
-    if(!_db.keys) _db.keys = [];
-    return [..._db.keys];
+  async getAllKeys() {
+    const keys = await redis.smembers('keys:all') || [];
+    const all = await Promise.all(keys.map(k => redis.get(`key:${k}`)));
+    return all.filter(Boolean).map(r => typeof r === 'string' ? JSON.parse(r) : r);
   },
 
-  // ── Баланс ──────────────────────────────────────────────
-
-  getBalance(userId) {
-    const u = _db.users.find(u=>u.id===userId);
-    if(!u) return null;
-    return {
-      balance: u.balance||0,
-      totalIn: u.balanceTotalIn||0,
-      totalOut: u.balanceTotalOut||0,
-      history: u.balanceHistory||[],
-    };
+  // ── Баланс ────────────────────────────────────────────────
+  async getBalance(userId) {
+    const u = await db.findUserById(userId);
+    if (!u) return null;
+    return { balance: u.balance || 0, totalIn: u.balanceTotalIn || 0, totalOut: u.balanceTotalOut || 0, history: u.balanceHistory || [] };
   },
 
-  addBalance(userId, amount, desc, source) {
-    const i = _db.users.findIndex(u=>u.id===userId);
-    if(i===-1) return null;
-    const u = _db.users[i];
-    if(!u.balanceHistory) u.balanceHistory = [];
-    u.balance = (u.balance||0) + amount;
-    u.balanceTotalIn = (u.balanceTotalIn||0) + amount;
-    u.balanceHistory.push({
-      id: uuidv4(),
-      type:'in', amount, desc: desc||'Пополнение баланса',
-      source: source||'manual',
-      date: new Date().toISOString(),
-      status:'completed',
-    });
-    save(_db); return _db.users[i];
+  async addBalance(userId, amount, desc, source) {
+    const u = await db.findUserById(userId);
+    if (!u) return null;
+    const entry = { id: uuidv4(), type: 'in', amount, desc: desc || 'Пополнение', source: source || 'manual', date: new Date().toISOString(), status: 'completed' };
+    const history = [...(u.balanceHistory || []), entry];
+    return db.updateUser(userId, { balance: (u.balance || 0) + amount, balanceTotalIn: (u.balanceTotalIn || 0) + amount, balanceHistory: history });
   },
 
-  spendBalance(userId, amount, desc) {
-    const i = _db.users.findIndex(u=>u.id===userId);
-    if(i===-1) return {ok:false, reason:'Пользователь не найден'};
-    const u = _db.users[i];
-    if((u.balance||0) < amount) return {ok:false, reason:'Недостаточно средств'};
-    if(!u.balanceHistory) u.balanceHistory = [];
-    u.balance = (u.balance||0) - amount;
-    u.balanceTotalOut = (u.balanceTotalOut||0) + amount;
-    u.balanceHistory.push({
-      id: uuidv4(),
-      type:'out', amount, desc: desc||'Списание',
-      date: new Date().toISOString(),
-      status:'completed',
-    });
-    save(_db); return {ok:true, user:_db.users[i]};
+  async spendBalance(userId, amount, desc) {
+    const u = await db.findUserById(userId);
+    if (!u) return { ok: false, reason: 'Не найден' };
+    if ((u.balance || 0) < amount) return { ok: false, reason: 'Недостаточно средств' };
+    const entry = { id: uuidv4(), type: 'out', amount, desc: desc || 'Списание', date: new Date().toISOString(), status: 'completed' };
+    const history = [...(u.balanceHistory || []), entry];
+    const updated = await db.updateUser(userId, { balance: (u.balance || 0) - amount, balanceTotalOut: (u.balanceTotalOut || 0) + amount, balanceHistory: history });
+    return { ok: true, user: updated };
   },
 
-  // Найти пользователя по Telegram ID
-  findUserByTelegramId(telegramId) {
-    return _db.users.find(u=>u.telegramId===String(telegramId))||null;
+  // ── Telegram ──────────────────────────────────────────────
+  async linkTelegram(userId, telegramId, telegramUsername) {
+    const existing = await db.findUserByTelegramId(telegramId);
+    if (existing && existing.id !== userId) return { error: 'Этот Telegram уже привязан к другому аккаунту' };
+    return db.updateUser(userId, { telegramId: String(telegramId), telegramUsername: telegramUsername || '' });
   },
 
-  // Привязать Telegram к аккаунту
-  linkTelegram(userId, telegramId, telegramUsername) {
-    const i = _db.users.findIndex(u=>u.id===userId);
-    if(i===-1) return null;
-    // Проверяем что этот TG не привязан к другому аккаунту
-    const existing = _db.users.find(u=>u.telegramId===String(telegramId)&&u.id!==userId);
-    if(existing) return {error:'Этот Telegram уже привязан к другому аккаунту'};
-    _db.users[i].telegramId = String(telegramId);
-    _db.users[i].telegramUsername = telegramUsername||null;
-    save(_db); return _db.users[i];
+  async unlinkTelegram(userId) {
+    const u = await db.findUserById(userId);
+    if (u?.telegramId) await redis.del(`idx:tg:${u.telegramId}`);
+    return db.updateUser(userId, { telegramId: '', telegramUsername: '' });
   },
 
-  unlinkTelegram(userId) {
-    const i = _db.users.findIndex(u=>u.id===userId);
-    if(i===-1) return null;
-    _db.users[i].telegramId = null;
-    _db.users[i].telegramUsername = null;
-    save(_db); return _db.users[i];
+  async saveTgLinkToken(token, userId) {
+    await redis.set(`tglink:${token}`, userId, { ex: 600 });
   },
 
-  // Pending TG link tokens (для привязки через бот)
-  saveTgLinkToken(token, userId) {
-    if(!_db.tgLinkTokens) _db.tgLinkTokens = [];
-    _db.tgLinkTokens = _db.tgLinkTokens.filter(t=>t.userId!==userId);
-    _db.tgLinkTokens.push({token, userId, expiresAt: new Date(Date.now()+10*60000).toISOString()});
-    save(_db);
+  async consumeTgLinkToken(token) {
+    const userId = await redis.get(`tglink:${token}`);
+    if (!userId) return null;
+    await redis.del(`tglink:${token}`);
+    return userId;
   },
 
-  consumeTgLinkToken(token) {
-    if(!_db.tgLinkTokens) return null;
-    const t = _db.tgLinkTokens.find(t=>t.token===token);
-    if(!t) return null;
-    if(new Date(t.expiresAt)<new Date()) {
-      _db.tgLinkTokens = _db.tgLinkTokens.filter(x=>x!==t); save(_db); return null;
-    }
-    _db.tgLinkTokens = _db.tgLinkTokens.filter(x=>x!==t); save(_db);
-    return t.userId;
-  },
+  cleanExpired() {},
 };
 
-setInterval(()=>db.cleanExpired(), 5*60000);
 module.exports = db;
