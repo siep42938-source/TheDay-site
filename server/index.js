@@ -244,6 +244,197 @@ app.post('/api/user/reset-hwid', auth, lim(5), (req,res)=>{
   res.json({ok:true, user:safe(db.updateUser(req.user.id,{hwid:null,lastHwidReset:new Date().toISOString()}))});
 });
 
+// ══ БАЛАНС ════════════════════════════════════════════════
+
+app.get('/api/user/balance', auth, (req,res)=>{
+  const bal = db.getBalance(req.user.id);
+  if(!bal) return res.status(404).json({error:'Не найден'});
+  res.json(bal);
+});
+
+// Покупка за баланс (подписка или HWID сброс)
+app.post('/api/user/buy-with-balance', auth, lim(10), (req,res)=>{
+  const {productId} = req.body;
+  const SHOP_ITEMS = {
+    sub_7:   { price:199,  type:'7DAYS',   days:7,     name:'7 дней',   sub:'7 дней'   },
+    sub_30:  { price:499,  type:'30DAYS',  days:30,    name:'30 дней',  sub:'30 дней'  },
+    sub_90:  { price:500,  type:'90DAYS',  days:90,    name:'90 дней',  sub:'90 дней'  },
+    sub_inf: { price:900,  type:'FOREVER', days:36500, name:'Навсегда', sub:'Навсегда' },
+    hwid:    { price:199,  type:'HWID',    days:0,     name:'Сброс HWID', sub:null     },
+  };
+  const item = SHOP_ITEMS[productId];
+  if(!item) return res.status(400).json({error:'Товар не найден'});
+
+  const u = db.findUserById(req.user.id);
+  if(!u) return res.status(404).json({error:'Пользователь не найден'});
+  if((u.balance||0) < item.price) return res.status(400).json({error:`Недостаточно монет. Нужно ${item.price}, у вас ${u.balance||0}`});
+
+  // Списываем баланс
+  const spend = db.spendBalance(req.user.id, item.price, `Покупка: ${item.name}`);
+  if(!spend.ok) return res.status(400).json({error: spend.reason});
+
+  // Применяем товар
+  if(item.type === 'HWID') {
+    db.updateUser(req.user.id, {hwid:null, lastHwidReset:new Date().toISOString()});
+  } else {
+    // Продлеваем подписку (если уже есть — добавляем дни)
+    const existing = db.findUserById(req.user.id);
+    const baseDate = existing.subExpires && new Date(existing.subExpires) > new Date()
+      ? new Date(existing.subExpires)
+      : new Date();
+    const expires = item.days >= 36500 ? null : new Date(baseDate.getTime() + item.days*86400000).toISOString();
+    db.updateUser(req.user.id, {sub: item.sub, subExpires: expires});
+  }
+
+  const updated = db.findUserById(req.user.id);
+  res.json({ok:true, message:`✓ Куплено: ${item.name}`, user:safe(updated), balance: updated.balance||0});
+});
+
+// Создать токен для привязки TG (сайт → бот)
+app.post('/api/user/tg-link-token', auth, lim(10), (req,res)=>{
+  const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const rand=(n)=>Array.from({length:n},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+  const token=rand(6);
+  db.saveTgLinkToken(token, req.user.id);
+  res.json({ok:true, token});
+});
+
+// Отвязать TG
+app.post('/api/user/tg-unlink', auth, lim(5), (req,res)=>{
+  const u=db.unlinkTelegram(req.user.id);
+  if(!u) return res.status(404).json({error:'Не найден'});
+  res.json({ok:true, user:safe(u)});
+});
+
+// ══ FANPAY WEBHOOK ════════════════════════════════════════
+// Вызывается ботом после подтверждения оплаты
+const BOT_SECRET = process.env.BOT_SECRET || 'bot_theday_2026';
+
+app.post('/api/bot/topup', (req,res)=>{
+  const {secret, userId, telegramId, amount, desc, source} = req.body;
+  if(secret !== BOT_SECRET) return res.status(403).json({error:'Неверный секрет'});
+  if(!amount || amount < 1) return res.status(400).json({error:'Неверная сумма'});
+
+  let user = null;
+  if(userId) user = db.findUserById(userId);
+  if(!user && telegramId) user = db.findUserByTelegramId(telegramId);
+  if(!user) return res.status(404).json({error:'Пользователь не найден'});
+
+  const u = db.addBalance(user.id, amount, desc||'Пополнение через бот', source||'bot');
+  res.json({ok:true, balance: u.balance||0, user:safe(u)});
+});
+
+// Привязать TG через токен (вызывается ботом)
+app.post('/api/bot/link-tg', (req,res)=>{
+  const {secret, token, telegramId, telegramUsername} = req.body;
+  if(secret !== BOT_SECRET) return res.status(403).json({error:'Неверный секрет'});
+  if(!token||!telegramId) return res.status(400).json({error:'Укажите token и telegramId'});
+
+  const userId = db.consumeTgLinkToken(token);
+  if(!userId) return res.status(400).json({error:'Токен не найден или истёк (10 минут)'});
+
+  const result = db.linkTelegram(userId, telegramId, telegramUsername);
+  if(result?.error) return res.status(409).json({error:result.error});
+  res.json({ok:true, user:safe(result)});
+});
+
+// Получить баланс по TG ID (для бота)
+app.post('/api/bot/balance', (req,res)=>{
+  const {secret, telegramId} = req.body;
+  if(secret !== BOT_SECRET) return res.status(403).json({error:'Неверный секрет'});
+  const user = db.findUserByTelegramId(telegramId);
+  if(!user) return res.status(404).json({error:'Аккаунт не привязан. Используйте /link на сайте.'});
+  const bal = db.getBalance(user.id);
+  res.json({ok:true, balance:bal.balance, username:user.username});
+});
+
+// Создать ключ через бот (после подтверждения оплаты)
+app.post('/api/bot/create-key', (req,res)=>{
+  const {secret, type, days} = req.body;
+  if(secret !== BOT_SECRET) return res.status(403).json({error:'Неверный секрет'});
+  if(!type) return res.status(400).json({error:'Укажите тип'});
+  const key = db.createKey(type, days||7);
+  res.json({ok:true, key});
+});
+
+// Покупка за монеты через бот (по telegramId)
+app.post('/api/bot/buy-with-balance', (req,res)=>{
+  const {secret, telegramId, productId} = req.body;
+  if(secret !== BOT_SECRET) return res.status(403).json({error:'Неверный секрет'});
+
+  const SHOP_ITEMS = {
+    sub_7:   { price:199,  type:'7DAYS',   days:7,     name:'7 дней',   sub:'7 дней'   },
+    sub_30:  { price:499,  type:'30DAYS',  days:30,    name:'30 дней',  sub:'30 дней'  },
+    sub_90:  { price:500,  type:'90DAYS',  days:90,    name:'90 дней',  sub:'90 дней'  },
+    sub_inf: { price:900,  type:'FOREVER', days:36500, name:'Навсегда', sub:'Навсегда' },
+    hwid:    { price:199,  type:'HWID',    days:0,     name:'Сброс HWID', sub:null     },
+  };
+
+  const item = SHOP_ITEMS[productId];
+  if(!item) return res.status(400).json({error:'Товар не найден'});
+
+  const user = db.findUserByTelegramId(telegramId);
+  if(!user) return res.status(404).json({error:'Аккаунт не привязан. Используйте /link на сайте.'});
+  if((user.balance||0) < item.price) return res.status(400).json({error:`Недостаточно монет. Нужно ${item.price}, у вас ${user.balance||0}`});
+
+  const spend = db.spendBalance(user.id, item.price, `Покупка: ${item.name}`);
+  if(!spend.ok) return res.status(400).json({error: spend.reason});
+
+  let key = null;
+  if(item.type === 'HWID') {
+    db.updateUser(user.id, {hwid:null, lastHwidReset:new Date().toISOString()});
+  } else {
+    key = db.createKey(item.type, item.days);
+    const existing = db.findUserById(user.id);
+    const baseDate = existing.subExpires && new Date(existing.subExpires) > new Date()
+      ? new Date(existing.subExpires) : new Date();
+    const expires = item.days >= 36500 ? null : new Date(baseDate.getTime() + item.days*86400000).toISOString();
+    db.updateUser(user.id, {sub: item.sub, subExpires: expires});
+  }
+
+  const updated = db.findUserById(user.id);
+  res.json({ok:true, message:`Куплено: ${item.name}`, key, balance: updated.balance||0});
+});
+
+// Telegram Stars — автоматическое зачисление после оплаты звёздами
+// Вызывается ботом при получении successful_payment
+app.post('/api/bot/stars-payment', (req,res)=>{
+  const {secret, telegramId, stars, productId, payload} = req.body;
+  if(secret !== BOT_SECRET) return res.status(403).json({error:'Неверный секрет'});
+
+  const STARS_ITEMS = {
+    topup_50:   { coins:50,   stars:50   },
+    topup_100:  { coins:100,  stars:100  },
+    topup_250:  { coins:250,  stars:250  },
+    topup_500:  { coins:500,  stars:500  },
+    topup_1000: { coins:1000, stars:1000 },
+    sub_7:      { coins:0,    stars:199, type:'7DAYS',   days:7,     name:'7 дней'   },
+    sub_30:     { coins:0,    stars:499, type:'30DAYS',  days:30,    name:'30 дней'  },
+    sub_90:     { coins:0,    stars:500, type:'90DAYS',  days:90,    name:'90 дней'  },
+    sub_inf:    { coins:0,    stars:900, type:'FOREVER', days:36500, name:'Навсегда' },
+  };
+
+  const item = STARS_ITEMS[productId];
+  if(!item) return res.status(400).json({error:'Товар не найден'});
+
+  const user = db.findUserByTelegramId(telegramId);
+
+  if(productId.startsWith('topup_')) {
+    // Пополнение баланса
+    if(user) {
+      db.addBalance(user.id, item.coins, `Пополнение через Telegram Stars (${stars}⭐)`, 'stars');
+      return res.json({ok:true, type:'topup', coins:item.coins, balance:user.balance||0});
+    }
+    // Если аккаунт не привязан — сохраняем pending пополнение
+    return res.json({ok:true, type:'topup_pending', coins:item.coins, message:'Привяжите аккаунт для зачисления'});
+  } else {
+    // Покупка подписки через Stars
+    if(!user) return res.status(404).json({error:'Аккаунт не привязан. Используйте /link'});
+    const key = db.createKey(item.type, item.days);
+    return res.json({ok:true, type:'subscription', key, name:item.name});
+  }
+});
+
 // ══ ADMIN PANEL ═══════════════════════════════════════════
 
 app.post('/api/admin/auth', lim(10,1), admin, (_,res)=>res.json({ok:true}));

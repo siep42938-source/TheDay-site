@@ -57,6 +57,10 @@ const API = {
     activateKey: (d) => API.post('/user/activate-key', d),
     resetHwid: () => API.post('/user/reset-hwid', {}),
     bindHwid: (hwid) => API.post('/user/bind-hwid', { hwid }),
+    balance: () => API.get('/user/balance'),
+    tgLinkToken: () => API.post('/user/tg-link-token', {}),
+    tgUnlink: () => API.post('/user/tg-unlink', {}),
+    buyWithBalance: (d) => API.post('/user/buy-with-balance', d),
   },
 
   // Генерация браузерного fingerprint (HWID для веб)

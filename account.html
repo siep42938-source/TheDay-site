@@ -154,9 +154,9 @@
           </div>
           <div class="acc-info-row">
             <span class="acc-info-label">Telegram</span>
-            <span class="acc-info-value" style="color:#4a5568">Не привязан</span>
+            <span class="acc-info-value" id="infoTelegram" style="color:#4a5568">Не привязан</span>
             <div class="acc-info-action">
-              <button class="acc-info-btn tg">Привязать</button>
+              <button class="acc-info-btn tg" id="tgLinkBtn" onclick="showModal('tgLink')">Привязать</button>
             </div>
           </div>
         </div>
@@ -237,6 +237,19 @@ function showModal(type) {
     user.sub === 'Навсегда' ? 'Навсегда' :
     user.subExpires ? fmtDate(user.subExpires) : '—';
 
+  // Telegram статус
+  const tgEl = document.getElementById('infoTelegram');
+  const tgBtn = document.getElementById('tgLinkBtn');
+  if (user.telegramId) {
+    tgEl.textContent = user.telegramUsername ? '@' + user.telegramUsername : 'ID: ' + user.telegramId;
+    tgEl.style.color = '#34d399';
+    if (tgBtn) { tgBtn.textContent = 'Отвязать'; tgBtn.onclick = () => showModal('tgUnlink'); }
+  } else {
+    tgEl.textContent = 'Не привязан';
+    tgEl.style.color = '#4a5568';
+    if (tgBtn) { tgBtn.textContent = 'Привязать'; tgBtn.onclick = () => showModal('tgLink'); }
+  }
+
   // Аватар
   const settings = JSON.parse(localStorage.getItem('td_settings') || '{}');
   if (settings.avatarData || user.avatar) {
@@ -281,7 +294,30 @@ const modals = {
       <span style="color:#4a5568">Последующие — раз в 30 дней или купите в магазине</span>
     </div>
     <button class="btn-primary" style="width:100%;justify-content:center;border-radius:10px;background:linear-gradient(135deg,#ef5350,#b71c1c)" onclick="resetHwid()">Сбросить HWID</button>
-    <a href="shop.html" style="display:block;text-align:center;margin-top:10px;font-size:12px;color:#87CEEB">Купить сброс HWID в магазине →</a>`
+    <a href="shop.html" style="display:block;text-align:center;margin-top:10px;font-size:12px;color:#87CEEB">Купить сброс HWID в магазине →</a>`,
+  tgLink: `
+    <h3>Привязать Telegram</h3>
+    <p style="color:var(--muted);margin:12px 0 16px">Привяжите Telegram для единого баланса и покупок через бота.</p>
+    <div id="tgLinkStep1">
+      <button class="btn-primary" style="width:100%;justify-content:center;border-radius:10px" onclick="generateTgToken()">Получить код привязки</button>
+    </div>
+    <div id="tgLinkStep2" style="display:none">
+      <div style="background:rgba(135,206,235,0.08);border:1px solid rgba(135,206,235,0.2);border-radius:10px;padding:16px;text-align:center;margin-bottom:14px">
+        <div style="font-size:11px;color:#4a5568;margin-bottom:6px">Ваш код (действителен 10 минут):</div>
+        <div id="tgToken" style="font-size:32px;font-weight:900;color:#87CEEB;letter-spacing:4px;font-family:monospace">------</div>
+      </div>
+      <div style="font-size:12px;color:#4a5568;margin-bottom:14px">
+        1. Откройте <a href="https://t.me/thedayclient_bot" target="_blank" style="color:#87CEEB">@thedayclient_bot</a><br>
+        2. Отправьте команду: <code style="color:#87CEEB">/link КОД</code>
+      </div>
+      <a href="https://t.me/thedayclient_bot" target="_blank" class="btn-primary" style="display:block;text-align:center;border-radius:10px;text-decoration:none;font-size:13px">Открыть бот →</a>
+    </div>
+    <div id="tgLinkResult" style="margin-top:10px;font-size:13px;text-align:center"></div>`,
+  tgUnlink: `
+    <h3>Отвязать Telegram</h3>
+    <p style="color:var(--muted);margin:12px 0 16px">Вы уверены что хотите отвязать Telegram аккаунт?</p>
+    <button class="btn-primary" style="width:100%;justify-content:center;border-radius:10px;background:linear-gradient(135deg,#ef5350,#b71c1c)" onclick="unlinkTg()">Отвязать</button>
+    <div id="tgUnlinkResult" style="margin-top:10px;font-size:13px;text-align:center"></div>`,
 };
 
 // ── Действия ─────────────────────────────────────────────
@@ -303,7 +339,7 @@ async function activateKey() {
   if (!key) { setResult('keyResult', false, 'Введите ключ'); return; }
 
   // Проверяем формат
-  if (!/^THEDAY-[A-Z0-9]+-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(key)) {
+  if (!/^THEDAY-[A-Z0-9]+-[A-Z0-9]{4}-[A-Z0-9]{4}(-[A-Z0-9]{4})?$/.test(key)) {
     setResult('keyResult', false, 'Неверный формат ключа. Пример: THEDAY-30DAYS-XXXX-XXXX');
     return;
   }
@@ -385,6 +421,32 @@ async function resetHwid() {
     content.appendChild(div);
   }
 }
-</script>
+
+async function generateTgToken() {
+  try {
+    const data = await API.user.tgLinkToken();
+    document.getElementById('tgToken').textContent = data.token;
+    document.getElementById('tgLinkStep1').style.display = 'none';
+    document.getElementById('tgLinkStep2').style.display = 'block';
+  } catch(e) {
+    setResult('tgLinkResult', false, e.message);
+  }
+}
+
+async function unlinkTg() {
+  try {
+    const data = await API.user.tgUnlink();
+    const u = data.user;
+    localStorage.setItem('td_user', JSON.stringify(u));
+    const tgEl = document.getElementById('infoTelegram');
+    const tgBtn = document.getElementById('tgLinkBtn');
+    if (tgEl) { tgEl.textContent = 'Не привязан'; tgEl.style.color = '#4a5568'; }
+    if (tgBtn) { tgBtn.textContent = 'Привязать'; tgBtn.onclick = () => showModal('tgLink'); }
+    setResult('tgUnlinkResult', true, '✓ Telegram отвязан');
+    setTimeout(closeModal, 1500);
+  } catch(e) {
+    setResult('tgUnlinkResult', false, e.message);
+  }
+}</script>
 </body>
 </html>

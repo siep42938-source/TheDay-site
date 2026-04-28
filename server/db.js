@@ -36,6 +36,9 @@ const db = {
       role:'Пользователь', createdAt: new Date().toISOString(),
       hwid:null, sub:null, subExpires:null, avatar:null,
       banned:false, banReason:'', lastHwidReset:null,
+      telegramId:null, telegramUsername:null,
+      balance:0, balanceTotalIn:0, balanceTotalOut:0,
+      balanceHistory:[],
     };
     _db.users.push(user); save(_db); return user;
   },
@@ -91,6 +94,7 @@ const db = {
     _db.otps=_db.otps.filter(o=>new Date(o.expiresAt)>now);
     _db.pending=_db.pending.filter(p=>new Date(p.expiresAt)>now);
     if(_db.keys) _db.keys=_db.keys.filter(k=>new Date(k.expiresAt)>now);
+    if(_db.tgLinkTokens) _db.tgLinkTokens=_db.tgLinkTokens.filter(t=>new Date(t.expiresAt)>now);
     save(_db);
   },
 
@@ -133,6 +137,97 @@ const db = {
   getAllKeys() {
     if(!_db.keys) _db.keys = [];
     return [..._db.keys];
+  },
+
+  // ── Баланс ──────────────────────────────────────────────
+
+  getBalance(userId) {
+    const u = _db.users.find(u=>u.id===userId);
+    if(!u) return null;
+    return {
+      balance: u.balance||0,
+      totalIn: u.balanceTotalIn||0,
+      totalOut: u.balanceTotalOut||0,
+      history: u.balanceHistory||[],
+    };
+  },
+
+  addBalance(userId, amount, desc, source) {
+    const i = _db.users.findIndex(u=>u.id===userId);
+    if(i===-1) return null;
+    const u = _db.users[i];
+    if(!u.balanceHistory) u.balanceHistory = [];
+    u.balance = (u.balance||0) + amount;
+    u.balanceTotalIn = (u.balanceTotalIn||0) + amount;
+    u.balanceHistory.push({
+      id: uuidv4(),
+      type:'in', amount, desc: desc||'Пополнение баланса',
+      source: source||'manual',
+      date: new Date().toISOString(),
+      status:'completed',
+    });
+    save(_db); return _db.users[i];
+  },
+
+  spendBalance(userId, amount, desc) {
+    const i = _db.users.findIndex(u=>u.id===userId);
+    if(i===-1) return {ok:false, reason:'Пользователь не найден'};
+    const u = _db.users[i];
+    if((u.balance||0) < amount) return {ok:false, reason:'Недостаточно средств'};
+    if(!u.balanceHistory) u.balanceHistory = [];
+    u.balance = (u.balance||0) - amount;
+    u.balanceTotalOut = (u.balanceTotalOut||0) + amount;
+    u.balanceHistory.push({
+      id: uuidv4(),
+      type:'out', amount, desc: desc||'Списание',
+      date: new Date().toISOString(),
+      status:'completed',
+    });
+    save(_db); return {ok:true, user:_db.users[i]};
+  },
+
+  // Найти пользователя по Telegram ID
+  findUserByTelegramId(telegramId) {
+    return _db.users.find(u=>u.telegramId===String(telegramId))||null;
+  },
+
+  // Привязать Telegram к аккаунту
+  linkTelegram(userId, telegramId, telegramUsername) {
+    const i = _db.users.findIndex(u=>u.id===userId);
+    if(i===-1) return null;
+    // Проверяем что этот TG не привязан к другому аккаунту
+    const existing = _db.users.find(u=>u.telegramId===String(telegramId)&&u.id!==userId);
+    if(existing) return {error:'Этот Telegram уже привязан к другому аккаунту'};
+    _db.users[i].telegramId = String(telegramId);
+    _db.users[i].telegramUsername = telegramUsername||null;
+    save(_db); return _db.users[i];
+  },
+
+  unlinkTelegram(userId) {
+    const i = _db.users.findIndex(u=>u.id===userId);
+    if(i===-1) return null;
+    _db.users[i].telegramId = null;
+    _db.users[i].telegramUsername = null;
+    save(_db); return _db.users[i];
+  },
+
+  // Pending TG link tokens (для привязки через бот)
+  saveTgLinkToken(token, userId) {
+    if(!_db.tgLinkTokens) _db.tgLinkTokens = [];
+    _db.tgLinkTokens = _db.tgLinkTokens.filter(t=>t.userId!==userId);
+    _db.tgLinkTokens.push({token, userId, expiresAt: new Date(Date.now()+10*60000).toISOString()});
+    save(_db);
+  },
+
+  consumeTgLinkToken(token) {
+    if(!_db.tgLinkTokens) return null;
+    const t = _db.tgLinkTokens.find(t=>t.token===token);
+    if(!t) return null;
+    if(new Date(t.expiresAt)<new Date()) {
+      _db.tgLinkTokens = _db.tgLinkTokens.filter(x=>x!==t); save(_db); return null;
+    }
+    _db.tgLinkTokens = _db.tgLinkTokens.filter(x=>x!==t); save(_db);
+    return t.userId;
   },
 };
 

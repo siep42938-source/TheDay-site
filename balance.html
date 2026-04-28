@@ -109,20 +109,15 @@
       <input class="glass-input" id="customAmount" type="number" placeholder="Или введите сумму вручную" style="width:100%;margin-bottom:16px" min="1"/>
       <div style="font-size:12px;color:#4a5568;margin-bottom:10px">Способ оплаты</div>
       <div class="pay-methods">
-        <div class="pay-method active" onclick="selectMethod(this,'card_ru')">
+        <div class="pay-method active" onclick="selectMethod(this,'fanpay')">
           <div style="font-size:22px">💳</div>
-          <div class="pay-method-name">Карта РФ</div>
-          <div class="pay-method-sub">Visa, MIR, MC</div>
+          <div class="pay-method-name">FanPay</div>
+          <div class="pay-method-sub">Карта, СБП, крипто</div>
         </div>
-        <div class="pay-method" onclick="selectMethod(this,'card_int')">
-          <div style="font-size:22px">🌐</div>
-          <div class="pay-method-name">Иностр. карта</div>
-          <div class="pay-method-sub">Visa, Mastercard</div>
-        </div>
-        <div class="pay-method" onclick="selectMethod(this,'crypto')">
-          <div style="font-size:22px">₿</div>
-          <div class="pay-method-name">Криптовалюта</div>
-          <div class="pay-method-sub">BTC, ETH, USDT</div>
+        <div class="pay-method" onclick="selectMethod(this,'bot')">
+          <div style="font-size:22px">🤖</div>
+          <div class="pay-method-name">Telegram бот</div>
+          <div class="pay-method-sub">Карта, крипто, СБП</div>
         </div>
       </div>
       <button class="btn-primary" style="width:100%;justify-content:center;border-radius:10px;margin-top:8px" onclick="topUp()">
@@ -149,7 +144,7 @@ const user = Auth.currentUser();
 if (!user) window.location.href = 'login.html';
 
 let selectedAmount = 250;
-let selectedMethod = 'card_ru';
+let selectedMethod = 'fanpay';
 
 function selectAmount(n) {
   selectedAmount = n;
@@ -171,42 +166,57 @@ document.getElementById('customAmount').addEventListener('input', function() {
   }
 });
 
-function getBalance() { return parseInt(localStorage.getItem('td_balance') || '0'); }
-function setBalance(n) { localStorage.setItem('td_balance', n); }
-
-function loadBalance() {
-  const bal = getBalance();
-  document.getElementById('balanceAmount').textContent = bal;
-  const history = JSON.parse(localStorage.getItem('td_balance_history') || '[]');
-  const totalIn = history.filter(h => h.type === 'in').reduce((a,b) => a + b.amount, 0);
-  const totalOut = history.filter(h => h.type === 'out').reduce((a,b) => a + b.amount, 0);
-  document.getElementById('totalIn').textContent = totalIn + ' монет';
-  document.getElementById('totalOut').textContent = totalOut + ' монет';
-  const tbody = document.getElementById('historyBody');
-  if (!history.length) return;
-  tbody.innerHTML = history.slice().reverse().map(h => `
-    <tr>
-      <td style="color:#4a5568">${h.date}</td>
-      <td>${h.desc}</td>
-      <td class="${h.type==='in'?'badge-plus':'badge-minus'}">${h.type==='in'?'+':'−'}${h.amount}</td>
-      <td style="color:#34d399">✓ Выполнено</td>
-    </tr>
-  `).join('');
+async function loadBalance() {
+  try {
+    const token = localStorage.getItem('td_token');
+    if (!token) return;
+    const data = await API.user.balance();
+    document.getElementById('balanceAmount').textContent = data.balance || 0;
+    document.getElementById('totalIn').textContent = (data.totalIn || 0) + ' монет';
+    document.getElementById('totalOut').textContent = (data.totalOut || 0) + ' монет';
+    const history = data.history || [];
+    const tbody = document.getElementById('historyBody');
+    if (!history.length) return;
+    tbody.innerHTML = history.slice().reverse().map(h => `
+      <tr>
+        <td style="color:#4a5568">${new Date(h.date).toLocaleDateString('ru-RU')}</td>
+        <td>${h.desc}</td>
+        <td class="${h.type==='in'?'badge-plus':'badge-minus'}">${h.type==='in'?'+':'−'}${h.amount}</td>
+        <td style="color:#34d399">✓ Выполнено</td>
+      </tr>
+    `).join('');
+  } catch(e) {
+    console.error('Ошибка загрузки баланса:', e.message);
+  }
 }
 
 function topUp() {
   const msg = document.getElementById('topupMsg');
-  if (!selectedAmount || selectedAmount < 1) { msg.style.color='#ef5350'; msg.textContent='Введите сумму'; return; }
-  // Симуляция пополнения (в реальности здесь был бы платёжный шлюз)
-  const newBal = getBalance() + selectedAmount;
-  setBalance(newBal);
-  const history = JSON.parse(localStorage.getItem('td_balance_history') || '[]');
-  history.push({ type:'in', amount: selectedAmount, desc: 'Пополнение баланса', date: new Date().toLocaleDateString('ru-RU') });
-  localStorage.setItem('td_balance_history', JSON.stringify(history));
-  msg.style.color = '#34d399';
-  msg.textContent = `✓ Баланс пополнен на ${selectedAmount} монет`;
-  loadBalance();
-  setTimeout(() => msg.textContent = '', 3000);
+  if (!selectedAmount || selectedAmount < 1) {
+    msg.style.color = '#ef5350';
+    msg.textContent = 'Введите сумму';
+    return;
+  }
+
+  if (selectedMethod === 'fanpay') {
+    // Открываем FanPay
+    msg.style.color = '#87CEEB';
+    msg.textContent = '↗ Переходим на FanPay...';
+    setTimeout(() => {
+      window.open('https://funpay.com/users/17389840/', '_blank');
+      msg.textContent = 'После оплаты отправьте скриншот в Telegram бот для подтверждения';
+      msg.style.color = '#4a5568';
+    }, 500);
+  } else if (selectedMethod === 'bot') {
+    // Открываем TG бот
+    msg.style.color = '#87CEEB';
+    msg.textContent = '↗ Открываем Telegram бот...';
+    setTimeout(() => {
+      window.open('https://t.me/thedayclient_bot', '_blank');
+      msg.textContent = 'В боте нажмите "💳 Пополнить баланс" и выберите сумму';
+      msg.style.color = '#4a5568';
+    }, 500);
+  }
 }
 
 loadBalance();
