@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="space">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Магазин — TheDay Client</title>
+  <meta http-equiv="X-Frame-Options" content="DENY"/>
+  <meta http-equiv="X-Content-Type-Options" content="nosniff"/>
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://the-day-site-ovk7.vercel.app; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"/>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" crossorigin="anonymous"/>
+  <style>
+    .shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:32px}
+    .shop-card{background:rgba(13,13,20,0.7);border:1px solid rgba(135,206,235,0.1);border-radius:16px;padding:24px;transition:all .3s;position:relative;overflow:hidden}
+    .shop-card:hover{border-color:rgba(135,206,235,0.3);transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,0.5)}
+    .shop-card.popular{border-color:rgba(135,206,235,0.3)}
+    .shop-card-badge{position:absolute;top:14px;right:14px;background:rgba(135,206,235,0.15);color:#87CEEB;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:1px}
+    .shop-card-icon{font-size:32px;margin-bottom:12px}
+    .shop-card-name{font-size:16px;font-weight:800;color:#fff;margin-bottom:4px}
+    .shop-card-desc{font-size:12px;color:#4a5568;margin-bottom:16px}
+    .shop-card-price{font-size:32px;font-weight:900;color:#87CEEB}
+    .shop-card-price span{font-size:14px;color:#4a5568;font-weight:400;margin-left:4px}
+    .shop-card-features{list-style:none;margin:14px 0;display:flex;flex-direction:column;gap:6px}
+    .shop-card-features li{font-size:12px;color:#e2e8f0;display:flex;align-items:center;gap:6px}
+    .shop-card-features li::before{content:'✓';color:#34d399;font-weight:700;flex-shrink:0}
+    .shop-section-title{font-size:16px;font-weight:700;color:#fff;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid rgba(135,206,235,0.08)}
+  </style>
+</head>
+<body>
+<canvas id="spaceCanvas"></canvas>
+<div class="page-transition" id="pageTransition"></div>
+<nav class="navbar" id="navbar">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <svg width="16" height="16" viewBox="0 0 18 18"><path d="M9 1L11.5 6.5H17L12.5 10L14.5 16L9 12.5L3.5 16L5.5 10L1 6.5H6.5L9 1Z" fill="#87CEEB"/></svg>
+      TheDay
+    </a>
+    <ul class="nav-links">
+      <li><a href="account.html" class="nav-active">Аккаунт</a></li>
+      <li><a href="index.html#buy">Покупка</a></li>
+      <li><a href="referrals.html">Рефералы</a></li>
+    </ul>
+    <div class="nav-burger" id="navBurger" onclick="toggleBurger()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      <div class="burger-dropdown" id="burgerDropdown"></div>
+    </div>
+  </div>
+</nav>
+<div class="dashboard-layout">
+  <aside class="dash-sidebar">
+    <div class="dash-sidebar-title">Мой профиль</div>
+    <nav class="dash-nav">
+      <a href="account.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Аккаунт</a>
+      <a href="balance.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Баланс</a>
+      <a href="shop.html" class="dash-nav-item active"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Магазин</a>
+      <a href="daily-bonus.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>Ежедневный бонус</a>
+      <a href="configs.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Магазин конфигов</a>
+      <a href="download.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Скачать клиент</a>
+      <a href="content.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>Создать контент</a>
+      <a href="config-keys.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>Ключи конфигов</a>
+      <a href="cosmetics.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Косметика</a>
+      <a href="support.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Поддержка</a>
+      <a href="#" onclick="Auth.logout();return false;" class="dash-nav-item" style="color:#ef5350;border-top:1px solid rgba(255,255,255,0.05);margin-top:8px;padding-top:12px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Выйти</a>
+    </nav>
+  </aside>
+  <main class="dash-main">
+    <div class="dash-breadcrumb"><a href="index.html">Главная</a><span>›</span><a href="account.html">Мой профиль</a><span>›</span>Магазин</div>
+    <div style="font-size:24px;font-weight:800;color:#fff;margin-bottom:6px">Магазин</div>
+    <div style="font-size:13px;color:#4a5568;margin-bottom:28px">Приобретите подписку или дополнительные услуги</div>
+
+    <div class="shop-section-title">Подписки TheDay</div>
+    <div class="shop-grid">
+      <div class="shop-card">
+        <div class="shop-card-icon">⚡</div>
+        <div class="shop-card-name">TheDay — 7 дней</div>
+        <div class="shop-card-desc">Попробуйте клиент</div>
+        <div class="shop-card-price">199 <span>руб.</span></div>
+        <ul class="shop-card-features">
+          <li>Полный доступ к клиенту</li>
+          <li>Все функции включены</li>
+          <li>Поддержка 24/7</li>
+        </ul>
+        <button class="btn-primary" style="width:100%;justify-content:center;border-radius:10px;margin-top:8px" onclick="buyItem('7 дней','199 руб.')">Купить</button>
+      </div>
+      <div class="shop-card popular">
+        <div class="shop-card-badge">ПОПУЛЯРНОЕ</div>
+        <div class="shop-card-icon">🌟</div>
+        <div class="shop-card-name">TheDay — 30 дней</div>
+        <div class="shop-card-desc">Лучший выбор</div>
+        <div class="shop-card-price">499 <span>руб.</span></div>
+        <ul class="shop-card-features">
+          <li>Полный доступ к клиенту</li>
+          <li>Все функции включены</li>
+          <li>Приоритетная поддержка</li>
+          <li>Облачные конфиги</li>
+        </ul>
+        <button class="btn-primary" style="width:100%;justify-content:center;border-radius:10px;margin-top:8px" onclick="buyItem('30 дней','499 руб.')">Купить</button>
+      </div>
+      <div class="shop-card">
+        <div class="shop-card-icon">💎</div>
+        <div class="shop-card-name">TheDay — 90 дней</div>
+        <div class="shop-card-desc">Максимальная выгода</div>
+        <div class="shop-card-price">999 <span>руб.</span></div>
+        <ul class="shop-card-features">
+          <li>Полный доступ к клиенту</li>
+          <li>Все функции включены</li>
+          <li>Приоритетная поддержка</li>
+          <li>Облачные конфиги</li>
+          <li>Эксклюзивная косметика</li>
+        </ul>
+        <button class="btn-primary" style="width:100%;justify-content:center;border-radius:10px;margin-top:8px" onclick="buyItem('90 дней','999 руб.')">Купить</button>
+      </div>
+      <div class="shop-card">
+        <div class="shop-card-badge">НАВСЕГДА</div>
+        <div class="shop-card-icon">♾️</div>
+        <div class="shop-card-name">TheDay — Навсегда</div>
+        <div class="shop-card-desc">Один раз и навсегда</div>
+        <div class="shop-card-price">2499 <span>руб.</span></div>
+        <ul class="shop-card-features">
+          <li>Вечный доступ</li>
+          <li>Все будущие обновления</li>
+          <li>VIP поддержка</li>
+          <li>Все функции навсегда</li>
+          <li>Эксклюзивный статус</li>
+        </ul>
+        <button class="btn-primary" style="width:100%;justify-content:center;border-radius:10px;margin-top:8px" onclick="buyItem('Навсегда','2499 руб.')">Купить</button>
+      </div>
+    </div>
+
+    <div class="shop-section-title">Дополнительные услуги</div>
+    <div class="shop-grid">
+      <div class="shop-card">
+        <div class="shop-card-icon">🔄</div>
+        <div class="shop-card-name">Сброс HWID</div>
+        <div class="shop-card-desc">Привяжите клиент к новому ПК</div>
+        <div class="shop-card-price">199 <span>руб.</span></div>
+        <ul class="shop-card-features">
+          <li>Мгновенный сброс</li>
+          <li>Без ограничений по времени</li>
+        </ul>
+        <button class="btn-primary" style="width:100%;justify-content:center;border-radius:10px;margin-top:8px" onclick="buyItem('Сброс HWID','199 руб.')">Купить</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
+  <div class="glass-card modal-box" onclick="event.stopPropagation()" style="max-width:400px;text-align:center">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script src="api.js"></script><script src="auth.js"></script><script src="smooth.js"></script><script src="theme.js"></script><script src="main.js"></script>
+<script>
+const user = Auth.currentUser();
+if (!user) window.location.href = 'login.html';
+
+function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
+
+function buyItem(name, price) {
+  document.getElementById('modalContent').innerHTML = `
+    <div style="font-size:32px;margin-bottom:12px">🛒</div>
+    <h3 style="color:#fff;margin-bottom:8px">${name}</h3>
+    <div style="font-size:24px;font-weight:900;color:#87CEEB;margin-bottom:16px">${price}</div>
+    <p style="font-size:13px;color:#4a5568;margin-bottom:20px">Для оплаты свяжитесь с нами в Discord или Telegram. После оплаты ключ будет выдан вручную.</p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <a href="https://discord.gg/theday" target="_blank" class="btn-primary" style="border-radius:10px;text-decoration:none">Discord</a>
+      <a href="https://t.me/theday" target="_blank" class="btn-ghost" style="border-radius:10px;text-decoration:none">Telegram</a>
+    </div>
+  `;
+  document.getElementById('modalOverlay').classList.add('active');
+}
+</script>
+</body>
+</html>

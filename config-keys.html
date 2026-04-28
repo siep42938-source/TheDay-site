@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="space">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ключи конфигов — TheDay Client</title>
+  <meta http-equiv="X-Frame-Options" content="DENY"/>
+  <meta http-equiv="X-Content-Type-Options" content="nosniff"/>
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://the-day-site-ovk7.vercel.app; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"/>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" crossorigin="anonymous"/>
+  <style>
+    .keys-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+    .keys-stat{background:rgba(13,13,20,0.7);border:1px solid rgba(135,206,235,0.1);border-radius:12px;padding:20px;text-align:center}
+    .keys-stat-num{font-size:32px;font-weight:900;color:#87CEEB}
+    .keys-stat-label{font-size:11px;color:#4a5568;margin-top:4px}
+    .keys-table{width:100%;border-collapse:collapse;font-size:13px}
+    .keys-table th{text-align:left;padding:10px 14px;font-size:10px;font-weight:700;letter-spacing:1.5px;color:#4fc3f7;text-transform:uppercase;border-bottom:1px solid rgba(135,206,235,0.08)}
+    .keys-table td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.03);color:#e2e8f0;font-family:monospace;font-size:12px}
+    .key-badge-active{background:rgba(52,211,153,0.1);color:#34d399;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;font-family:inherit}
+    .key-badge-used{background:rgba(255,255,255,0.05);color:#4a5568;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;font-family:inherit}
+    .sort-btns{display:flex;gap:8px;margin-bottom:16px}
+    .sort-btn{padding:6px 14px;border-radius:8px;border:1px solid rgba(135,206,235,0.15);background:rgba(135,206,235,0.05);color:#4a5568;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;transition:all .2s}
+    .sort-btn.active{background:rgba(135,206,235,0.12);border-color:rgba(135,206,235,0.3);color:#87CEEB}
+  </style>
+</head>
+<body>
+<canvas id="spaceCanvas"></canvas>
+<div class="page-transition" id="pageTransition"></div>
+<nav class="navbar" id="navbar">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <svg width="16" height="16" viewBox="0 0 18 18"><path d="M9 1L11.5 6.5H17L12.5 10L14.5 16L9 12.5L3.5 16L5.5 10L1 6.5H6.5L9 1Z" fill="#87CEEB"/></svg>
+      TheDay
+    </a>
+    <ul class="nav-links">
+      <li><a href="account.html" class="nav-active">Аккаунт</a></li>
+      <li><a href="index.html#buy">Покупка</a></li>
+      <li><a href="referrals.html">Рефералы</a></li>
+    </ul>
+    <div class="nav-burger" id="navBurger" onclick="toggleBurger()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      <div class="burger-dropdown" id="burgerDropdown"></div>
+    </div>
+  </div>
+</nav>
+<div class="dashboard-layout">
+  <aside class="dash-sidebar">
+    <div class="dash-sidebar-title">Мой профиль</div>
+    <nav class="dash-nav">
+      <a href="account.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Аккаунт</a>
+      <a href="balance.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Баланс</a>
+      <a href="shop.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Магазин</a>
+      <a href="daily-bonus.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>Ежедневный бонус</a>
+      <a href="configs.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Магазин конфигов</a>
+      <a href="download.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Скачать клиент</a>
+      <a href="content.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>Создать контент</a>
+      <a href="config-keys.html" class="dash-nav-item active"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>Ключи конфигов</a>
+      <a href="cosmetics.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Косметика</a>
+      <a href="support.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Поддержка</a>
+      <a href="#" onclick="Auth.logout();return false;" class="dash-nav-item" style="color:#ef5350;border-top:1px solid rgba(255,255,255,0.05);margin-top:8px;padding-top:12px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Выйти</a>
+    </nav>
+  </aside>
+  <main class="dash-main">
+    <div class="dash-breadcrumb"><a href="index.html">Главная</a><span>›</span><a href="account.html">Мой профиль</a><span>›</span>Ключи конфигов</div>
+    <div style="font-size:24px;font-weight:800;color:#fff;margin-bottom:6px">Ключи конфигов</div>
+    <div style="font-size:13px;color:#4a5568;margin-bottom:24px">Управляйте ключами для обмена конфигами с другими игроками</div>
+
+    <div class="keys-stats">
+      <div class="keys-stat"><div class="keys-stat-num" id="totalKeys">0</div><div class="keys-stat-label">Всего ключей</div></div>
+      <div class="keys-stat"><div class="keys-stat-num">20</div><div class="keys-stat-label">Максимум ключей</div></div>
+      <div class="keys-stat"><div class="keys-stat-num" id="freeSlots">20</div><div class="keys-stat-label">Доступно слотов</div></div>
+    </div>
+
+    <div class="glass-card" style="padding:20px;margin-bottom:20px">
+      <div style="font-size:13px;color:#4a5568;line-height:1.6;margin-bottom:16px">
+        Ключи для обмена конфигами создаются непосредственно в игре через клиент. На этой странице вы можете просмотреть все созданные вами ключи, проверить их статус и при необходимости удалить.
+      </div>
+      <div class="sort-btns">
+        <button class="sort-btn active" onclick="sortKeys('new',this)">Сначала новые</button>
+        <button class="sort-btn" onclick="sortKeys('old',this)">Сначала старые</button>
+      </div>
+      <div class="glass-card" style="padding:0;overflow:hidden">
+        <table class="keys-table">
+          <thead><tr><th>Ключ</th><th>Конфиг</th><th>Создан</th><th>Статус</th><th>Действие</th></tr></thead>
+          <tbody id="keysBody">
+            <tr><td colspan="5" style="text-align:center;padding:40px;color:#4a5568;font-family:inherit">
+              <div style="font-size:32px;margin-bottom:8px">🔑</div>
+              У вас пока нет созданных ключей<br>
+              <span style="font-size:11px">Создайте ключ в игре через меню конфигов</span>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="glass-card" style="padding:24px">
+      <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:12px">Как создать ключ?</div>
+      <ol style="font-size:13px;color:#4a5568;line-height:2;padding-left:20px">
+        <li>Запустите TheDay Client</li>
+        <li>Откройте меню конфигов в игре</li>
+        <li>Выберите конфиг который хотите поделиться</li>
+        <li>Нажмите "Создать ключ обмена"</li>
+        <li>Ключ появится в этом разделе</li>
+      </ol>
+    </div>
+  </main>
+</div>
+<script src="api.js"></script><script src="auth.js"></script><script src="smooth.js"></script><script src="theme.js"></script><script src="main.js"></script>
+<script>
+const user = Auth.currentUser();
+if (!user) window.location.href = 'login.html';
+
+let keys = JSON.parse(localStorage.getItem('td_config_keys') || '[]');
+let sortOrder = 'new';
+
+function sortKeys(order, btn) {
+  sortOrder = order;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderKeys();
+}
+
+function renderKeys() {
+  const sorted = [...keys].sort((a,b) => sortOrder === 'new'
+    ? new Date(b.created) - new Date(a.created)
+    : new Date(a.created) - new Date(b.created)
+  );
+  document.getElementById('totalKeys').textContent = keys.length;
+  document.getElementById('freeSlots').textContent = 20 - keys.length;
+  const tbody = document.getElementById('keysBody');
+  if (!sorted.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px;color:#4a5568;font-family:inherit">
+      <div style="font-size:32px;margin-bottom:8px">🔑</div>
+      У вас пока нет созданных ключей<br>
+      <span style="font-size:11px">Создайте ключ в игре через меню конфигов</span>
+    </td></tr>`;
+    return;
+  }
+  tbody.innerHTML = sorted.map(k => `
+    <tr>
+      <td>${k.key}</td>
+      <td style="font-family:inherit;color:#87CEEB">${k.config}</td>
+      <td style="font-family:inherit;color:#4a5568">${k.created}</td>
+      <td><span class="${k.used ? 'key-badge-used' : 'key-badge-active'}">${k.used ? 'Использован' : 'Активен'}</span></td>
+      <td><button onclick="deleteKey('${k.key}')" style="background:rgba(239,83,80,0.1);border:1px solid rgba(239,83,80,0.2);color:#ef5350;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit">Удалить</button></td>
+    </tr>
+  `).join('');
+}
+
+function deleteKey(key) {
+  if (!confirm('Удалить ключ?')) return;
+  keys = keys.filter(k => k.key !== key);
+  localStorage.setItem('td_config_keys', JSON.stringify(keys));
+  renderKeys();
+}
+
+renderKeys();
+</script>
+</body>
+</html>
