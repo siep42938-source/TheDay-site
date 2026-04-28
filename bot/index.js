@@ -12,8 +12,8 @@ const bot = new Telegraf(BOT_TOKEN);
 const PRODUCTS = [
   { id: 'sub_7',  name: '⚡ TheDay — 7 дней',    price: 199,  days: 7,     key: 'THEDAY-7DAY-DEMO' },
   { id: 'sub_30', name: '🌟 TheDay — 30 дней',   price: 499,  days: 30,    key: 'THEDAY-30DAY-DEMO' },
-  { id: 'sub_90', name: '💎 TheDay — 90 дней',   price: 999,  days: 90,    key: 'THEDAY-90DAY-DEMO' },
-  { id: 'sub_inf',name: '♾️ TheDay — Навсегда',  price: 2499, days: 36500, key: 'THEDAY-FOREVER-DEMO' },
+  { id: 'sub_90', name: '💎 TheDay — 90 дней',   price: 500,  days: 90,    key: 'THEDAY-90DAY-DEMO' },
+  { id: 'sub_inf',name: '♾️ TheDay — Навсегда',  price: 900,  days: 36500, key: 'THEDAY-FOREVER-DEMO' },
   { id: 'hwid',   name: '🔄 Сброс HWID',         price: 199,  days: 0,     key: null },
 ];
 
