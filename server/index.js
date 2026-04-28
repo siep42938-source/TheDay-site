@@ -98,18 +98,18 @@ app.post('/api/auth/register/verify', lim(20), async (req,res)=>{
 app.post('/api/auth/login/send', lim(10), async (req,res)=>{
   const {email,password}=req.body;
   if(!email||!password) return res.status(400).json({error:'Заполните все поля'});
-  const user=db.findUserByEmail(email);
-  if(!user) return res.status(401).json({error:'Неверный email или пароль'});
+  // Поддержка входа по email ИЛИ никнейму
+  let user=db.findUserByEmail(email)||db.findUserByUsername(email);
+  if(!user) return res.status(401).json({error:'Неверный email/никнейм или пароль'});
   if(user.banned) return res.status(403).json({error:'Аккаунт заблокирован'+(user.banReason?': '+user.banReason:'')});
   const ok=await bcrypt.compare(password,user.passwordHash);
-  if(!ok) return res.status(401).json({error:'Неверный email или пароль'});
-  const code=db.createOTP(email,'login');
+  if(!ok) return res.status(401).json({error:'Неверный email/никнейм или пароль'});
+  const code=db.createOTP(user.email,'login');
   try {
-    await sendOTP(email,code,'login');
-    res.json({ok:true,message:`Код отправлен на ${email}`,_devCode:code});
+    await sendOTP(user.email,code,'login');
+    res.json({ok:true,message:`Код отправлен на ${user.email}`,email:user.email,_devCode:code});
   } catch(e) {
     console.error('SMTP:',e.message);
-    // В режиме разработки показываем код даже при ошибке SMTP
     if(process.env.NODE_ENV==='development'){
       return res.json({ok:true,message:`Код: ${code} (SMTP недоступен)`,_devCode:code});
     }

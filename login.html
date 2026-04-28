@@ -29,8 +29,8 @@
       <p class="auth-sub">Войдите в свой аккаунт</p>
       <div class="auth-form">
         <div class="form-group">
-          <label>Email</label>
-          <input type="email" id="loginEmail" class="glass-input" placeholder="email@example.com" autocomplete="email"/>
+          <label>Email или никнейм</label>
+          <input type="text" id="loginEmail" class="glass-input" placeholder="email@example.com или Nickname" autocomplete="username"/>
         </div>
         <div class="form-group">
           <div class="form-label-row">
@@ -180,9 +180,9 @@ async function sendLoginCode() {
 
   setLoading('loginBtn','loginSpinner','loginBtnText', true, 'Отправка...');
   try {
-    await apiPost('/auth/login/send', { email, password: pass });
-    loginEmail = email;
-    document.getElementById('otpSubtext').textContent = `Код отправлен на ${email}`;
+    const data = await apiPost('/auth/login/send', { email, password: pass });
+    loginEmail = data.email || email; // сервер может вернуть реальный email если вошли по никнейму
+    document.getElementById('otpSubtext').textContent = `Код отправлен на ${loginEmail.includes('@') ? loginEmail : 'вашу почту'}`;
     document.getElementById('step1').style.display = 'none';
     document.getElementById('step2').style.display = 'block';
     initOTP('otpInputs');
