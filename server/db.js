@@ -90,7 +90,49 @@ const db = {
     const now=new Date();
     _db.otps=_db.otps.filter(o=>new Date(o.expiresAt)>now);
     _db.pending=_db.pending.filter(p=>new Date(p.expiresAt)>now);
+    if(_db.keys) _db.keys=_db.keys.filter(k=>new Date(k.expiresAt)>now);
     save(_db);
+  },
+
+  // Система ключей активации
+  createKey(type, days) {
+    if(!_db.keys) _db.keys = [];
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const rand = (n) => Array.from({length:n}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+    const key = `THEDAY-${type.toUpperCase()}-${rand(4)}-${rand(4)}`;
+    const keyData = {
+      key,
+      type,
+      days,
+      used: false,
+      usedBy: null,
+      usedAt: null,
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 24*60*60*1000).toISOString() // 24 часа
+    };
+    _db.keys.push(keyData);
+    save(_db);
+    return key;
+  },
+
+  useKey(key, userId) {
+    if(!_db.keys) _db.keys = [];
+    const keyData = _db.keys.find(k => k.key === key.trim().toUpperCase());
+    if(!keyData) return {ok:false, reason:'Ключ не найден'};
+    if(keyData.used) return {ok:false, reason:'Ключ уже использован'};
+    if(new Date(keyData.expiresAt) < new Date()) {
+      return {ok:false, reason:'Ключ истёк (действителен 24 часа)'};
+    }
+    keyData.used = true;
+    keyData.usedBy = userId;
+    keyData.usedAt = new Date().toISOString();
+    save(_db);
+    return {ok:true, days: keyData.days, type: keyData.type};
+  },
+
+  getAllKeys() {
+    if(!_db.keys) _db.keys = [];
+    return [..._db.keys];
   },
 };
 

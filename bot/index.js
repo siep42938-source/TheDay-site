@@ -143,7 +143,13 @@ bot.action(/^issue_(\d+)_(.+)$/, async (ctx) => {
 
   await ctx.answerCbQuery('✅ Ключ выдан!');
 
-  const key = product?.key || genKey(productId);
+  // Генерируем уникальный ключ с названием подписки
+  const typeMap = { sub_7:'7DAYS', sub_30:'30DAYS', sub_90:'90DAYS', sub_inf:'FOREVER', hwid:'HWID' };
+  const keyType = typeMap[productId] || 'CUSTOM';
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const rand = (n) => Array.from({length:n}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+  const key = `THEDAY-${keyType}-${rand(4)}-${rand(4)}`;
+  const expiresAt = new Date(Date.now() + 24*60*60*1000).toLocaleString('ru-RU');
 
   // Отправляем ключ пользователю
   await bot.telegram.sendMessage(
@@ -151,7 +157,9 @@ bot.action(/^issue_(\d+)_(.+)$/, async (ctx) => {
     `🎉 *Оплата подтверждена!*\n\n` +
     `📦 Товар: ${product?.name}\n` +
     `🔑 Ваш ключ активации:\n\`${key}\`\n\n` +
-    `Активируйте ключ на сайте в разделе *Аккаунт → Активация ключа*\n\n` +
+    `⚠️ Ключ действителен *24 часа* (до ${expiresAt})\n` +
+    `⚠️ Ключ одноразовый — активируйте сразу!\n\n` +
+    `Активируйте на сайте: *Аккаунт → Активация ключа*\n` +
     `🌐 ${SITE_URL}`,
     { parse_mode: 'Markdown' }
   );

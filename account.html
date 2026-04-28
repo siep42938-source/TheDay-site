@@ -7,7 +7,7 @@
   <meta http-equiv="X-Frame-Options" content="DENY"/>
   <meta http-equiv="X-Content-Type-Options" content="nosniff"/>
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://the-day-site-ovk7.vercel.app; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"/>
   <link rel="stylesheet" href="style.css"/>
   <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -168,11 +168,13 @@
       <div class="glass-card" style="padding:24px">
         <h3 style="font-size:14px;font-weight:700;color:#fff;margin-bottom:16px">Активация ключа</h3>
         <div class="acc-key-input-row">
-          <input class="glass-input" id="keyInput" placeholder="Введите ключ активации" style="flex:1"/>
+          <input class="glass-input" id="keyInput" placeholder="THEDAY-30DAYS-XXXX-XXXX" style="flex:1"/>
           <button class="btn-primary" onclick="activateKey()" style="white-space:nowrap;border-radius:10px;padding:12px 20px">Активировать ключ</button>
         </div>
         <div id="keyResult" style="margin-top:10px;font-size:13px"></div>
-        <div style="font-size:11px;color:#4a5568;margin-top:8px">Демо-ключи: THEDAY-7DAY-DEMO / THEDAY-30DAY-DEMO / THEDAY-90DAY-DEMO / THEDAY-FOREVER-DEMO</div>
+        <div style="font-size:11px;color:#4a5568;margin-top:8px">
+          Купить ключ: <a href="https://t.me/thedayclient_bot" target="_blank" style="color:#87CEEB">@thedayclient_bot</a> · Ключ действителен 24 часа после выдачи
+        </div>
       </div>
     </div>
   </main>

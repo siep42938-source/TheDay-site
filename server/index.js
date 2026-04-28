@@ -179,21 +179,24 @@ app.post('/api/user/change-password', auth, async (req,res)=>{
 app.post('/api/user/activate-key', auth, lim(20), (req,res)=>{
   const {key}=req.body;
   if(!key) return res.status(400).json({error:'Укажите ключ'});
-  const keys={
-    'THEDAY-7DAY-DEMO':    {sub:'7 дней',   days:7},
-    'THEDAY-30DAY-DEMO':   {sub:'30 дней',  days:30},
-    'THEDAY-90DAY-DEMO':   {sub:'90 дней',  days:90},
-    'THEDAY-FOREVER-DEMO': {sub:'Навсегда', days:null},
-  };
-  const f=keys[key.trim().toUpperCase()];
-  if(!f) return res.status(400).json({error:'Неверный ключ активации'});
-  // Проверяем что пользователь существует
+
   const existing=db.findUserById(req.user.id);
   if(!existing) return res.status(404).json({error:'Пользователь не найден. Войдите заново.'});
-  const expires=f.days ? new Date(Date.now()+f.days*86400000).toISOString() : null;
-  const u=db.updateUser(req.user.id,{sub:f.sub,subExpires:expires});
-  if(!u) return res.status(500).json({error:'Ошибка обновления. Попробуйте снова.'});
-  res.json({ok:true,message:`Подписка "${f.sub}" активирована!`,user:safe(u)});
+
+  // Сначала проверяем реальные ключи из БД
+  const result = db.useKey(key, req.user.id);
+  if(result.ok) {
+    const expires = result.days ? new Date(Date.now()+result.days*86400000).toISOString() : null;
+    const subName = result.type === '7DAYS' ? '7 дней' :
+                    result.type === '30DAYS' ? '30 дней' :
+                    result.type === '90DAYS' ? '90 дней' : 'Навсегда';
+    const u=db.updateUser(req.user.id,{sub:subName,subExpires:expires});
+    if(!u) return res.status(500).json({error:'Ошибка обновления. Попробуйте снова.'});
+    return res.json({ok:true,message:`Подписка "${subName}" активирована!`,user:safe(u)});
+  }
+
+  // Если не нашли в БД — возвращаем ошибку
+  return res.status(400).json({error: result.reason || 'Неверный ключ активации'});
 });
 app.post('/api/user/reset-hwid', auth, lim(5), (req,res)=>{
   const u=db.findUserById(req.user.id);
@@ -211,6 +214,19 @@ app.post('/api/admin/auth', lim(10,1), admin, (_,res)=>res.json({ok:true}));
 app.get('/api/admin/stats', admin, (_,res)=>{
   const u=db.getAllUsers();
   res.json({total:u.length,active:u.filter(x=>x.sub&&!x.banned).length,banned:u.filter(x=>x.banned).length,noSub:u.filter(x=>!x.sub).length});
+});
+
+// Создать ключ активации
+app.post('/api/admin/create-key', admin, (req,res)=>{
+  const {type, days} = req.body;
+  if(!type) return res.status(400).json({error:'Укажите тип ключа'});
+  const key = db.createKey(type, days || 30);
+  res.json({ok:true, key});
+});
+
+// Список всех ключей
+app.get('/api/admin/keys', admin, (_,res)=>{
+  res.json({keys: db.getAllKeys()});
 });
 app.get('/api/admin/users', admin, (_,res)=>res.json({users:db.getAllUsers().map(safe)}));
 app.get('/api/admin/user/:q', admin, (req,res)=>{

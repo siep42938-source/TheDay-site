@@ -317,17 +317,42 @@ const Auth = {
   // ── АКТИВИРОВАТЬ КЛЮЧ ────────────────────────────────────
   activateKey(key) {
     if (!key || typeof key !== 'string') throw new Error('Неверный ключ');
-    const keys = {
-      'THEDAY-7DAY-DEMO':     { sub: '7 дней',   days: 7 },
-      'THEDAY-30DAY-DEMO':    { sub: '30 дней',  days: 30 },
-      'THEDAY-90DAY-DEMO':    { sub: '90 дней',  days: 90 },
-      'THEDAY-FOREVER-DEMO':  { sub: 'Навсегда', days: 36500 },
+
+    const k = key.trim().toUpperCase();
+
+    // Проверяем формат ключа: THEDAY-TYPE-XXXX-XXXX
+    if (!/^THEDAY-[A-Z0-9]+-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(k)) {
+      throw new Error('Неверный формат ключа');
+    }
+
+    // Проверяем в localStorage (ключи выданные ботом)
+    const usedKeys = JSON.parse(localStorage.getItem('td_used_keys') || '[]');
+    if (usedKeys.includes(k)) throw new Error('Ключ уже использован');
+
+    // Определяем тип подписки по ключу
+    const typeMap = {
+      '7DAYS':   { sub: '7 дней',   days: 7 },
+      '30DAYS':  { sub: '30 дней',  days: 30 },
+      '90DAYS':  { sub: '90 дней',  days: 90 },
+      'FOREVER': { sub: 'Навсегда', days: 36500 },
+      'HWID':    { sub: null,       days: 0, hwid: true },
     };
-    const found = keys[key.trim().toUpperCase()];
-    if (!found) throw new Error('Неверный ключ активации');
-    // Используем ISO формат для корректного сравнения дат
+
+    const parts = k.split('-');
+    const type = parts[1];
+    const found = typeMap[type];
+    if (!found) throw new Error('Неверный тип ключа');
+
+    // Помечаем ключ как использованный
+    usedKeys.push(k);
+    localStorage.setItem('td_used_keys', JSON.stringify(usedKeys));
+
+    if (found.hwid) {
+      return this.updateProfile({ hwid: null });
+    }
+
     const expires = found.days >= 36000
-      ? null  // Навсегда — нет даты истечения
+      ? null
       : new Date(Date.now() + found.days * 86400000).toISOString();
     return this.updateProfile({ sub: found.sub, subExpires: expires });
   },
