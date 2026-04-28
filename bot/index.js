@@ -2,14 +2,25 @@
 const { Telegraf, Markup } = require('telegraf');
 const { message } = require('telegraf/filters');
 const fetch = (...args) => import('node-fetch').then(({default:f}) => f(...args));
+const { SocksProxyAgent } = require('socks-proxy-agent');
+const https = require('https');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const ADMIN_ID  = process.env.ADMIN_ID;
 const SITE_URL  = process.env.SITE_URL  || 'https://theday-site.pages.dev';
 const API_URL   = process.env.API_URL   || 'https://the-day-site-ovk7.vercel.app/api';
 const BOT_SECRET= process.env.BOT_SECRET|| 'bot_theday_2026';
+const PROXY     = process.env.HTTPS_PROXY || process.env.SOCKS_PROXY || null;
 
-const bot = new Telegraf(BOT_TOKEN);
+// Настройка прокси если задан
+let botOptions = {};
+if (PROXY) {
+  const agent = new SocksProxyAgent(PROXY);
+  botOptions = { telegram: { agent } };
+  console.log(`✦ Используется прокси: ${PROXY}`);
+}
+
+const bot = new Telegraf(BOT_TOKEN, botOptions);
 
 const PRODUCTS = [
   { id:'sub_7',  name:'7 дней',   emoji:'⚡', price:199, days:7,     type:'7DAYS'   },
