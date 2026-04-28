@@ -31,7 +31,18 @@ const API = {
       if (!ct || !ct.includes('application/json')) throw new Error('bad content-type');
       data = await res.json();
     } catch { throw new Error('Ошибка сервера'); }
-    if (!res.ok) throw new Error(data.error || 'Ошибка сервера');
+    if (!res.ok) {
+      const msg = data.error || 'Ошибка сервера';
+      // Сессия протухла — разлогиниваем автоматически
+      if (res.status === 401) {
+        localStorage.removeItem('td_token');
+        localStorage.removeItem('td_user');
+        if (!window.location.pathname.includes('login')) {
+          setTimeout(() => { window.location.href = 'login.html'; }, 800);
+        }
+      }
+      throw new Error(msg);
+    }
     return data;
   },
 

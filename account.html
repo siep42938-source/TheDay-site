@@ -338,7 +338,6 @@ async function activateKey() {
   const key = (document.getElementById('keyInput')?.value || '').trim().toUpperCase();
   if (!key) { setResult('keyResult', false, 'Введите ключ'); return; }
 
-  // Проверяем формат
   if (!/^THEDAY-[A-Z0-9]+-[A-Z0-9]{4}-[A-Z0-9]{4}(-[A-Z0-9]{4})?$/.test(key)) {
     setResult('keyResult', false, 'Неверный формат ключа. Пример: THEDAY-30DAYS-XXXX-XXXX');
     return;
@@ -346,19 +345,25 @@ async function activateKey() {
 
   try {
     const token = localStorage.getItem('td_token');
-    if (!token) { setResult('keyResult', false, 'Войдите в аккаунт'); return; }
-
-    // Всегда используем сервер для активации
+    if (!token) {
+      setResult('keyResult', false, 'Войдите в аккаунт');
+      setTimeout(() => { window.location.href = 'login.html'; }, 1500);
+      return;
+    }
     const data = await API.user.activateKey({ key });
     const u = data.user;
     localStorage.setItem('td_user', JSON.stringify(u));
-
     setResult('keyResult', true, `✓ ${data.message || 'Подписка активирована!'}`);
     document.getElementById('infoSubExpires').textContent =
       u.sub === 'Навсегда' ? 'Навсегда' : u.subExpires ? fmtDate(u.subExpires) : '—';
     document.getElementById('keyInput').value = '';
   } catch(e) {
-    setResult('keyResult', false, e.message);
+    if (e.message.includes('устарела') || e.message.includes('недействителен') || e.message.includes('авторизован')) {
+      setResult('keyResult', false, 'Сессия истекла. Перенаправляем на вход...');
+      setTimeout(() => Auth.logout(), 1500);
+    } else {
+      setResult('keyResult', false, e.message);
+    }
   }
 }
 
