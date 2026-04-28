@@ -16,9 +16,14 @@ async function getUsers() {
     balance: Number(u.balance || 0),
     balanceTotalIn: Number(u.balanceTotalIn || 0),
     balanceTotalOut: Number(u.balanceTotalOut || 0),
-    balanceHistory: u.balanceHistory ? JSON.parse(u.balanceHistory) : [],
+    balanceHistory: safeJson(u.balanceHistory, []),
     banned: u.banned === 'true',
   }));
+}
+
+function safeJson(str, fallback) {
+  if (!str || str === '' || str === 'null') return fallback;
+  try { return JSON.parse(str); } catch { return fallback; }
 }
 
 async function saveUser(user) {
@@ -57,7 +62,7 @@ const db = {
       balance: Number(u.balance || 0),
       balanceTotalIn: Number(u.balanceTotalIn || 0),
       balanceTotalOut: Number(u.balanceTotalOut || 0),
-      balanceHistory: u.balanceHistory ? JSON.parse(u.balanceHistory) : [],
+      balanceHistory: safeJson(u.balanceHistory, []),
       banned: u.banned === 'true',
     };
   },
@@ -121,7 +126,8 @@ const db = {
     const key = `otp:${email.toLowerCase()}:${type}`;
     const raw = await redis.get(key);
     if (!raw) return { ok: false, reason: 'Код не найден или уже использован' };
-    const otp = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    const otp = safeJson(typeof raw === 'string' ? raw : JSON.stringify(raw), null);
+    if (!otp) return { ok: false, reason: 'Код не найден или уже использован' };
     otp.attempts = (otp.attempts || 0) + 1;
     if (otp.attempts > 5) { await redis.del(key); return { ok: false, reason: 'Слишком много попыток' }; }
     if (otp.code !== String(code)) { await redis.set(key, JSON.stringify(otp), { ex: 600 }); return { ok: false, reason: 'Неверный код' }; }
@@ -137,7 +143,7 @@ const db = {
   async getPending(email) {
     const raw = await redis.get(`pending:${email.toLowerCase()}`);
     if (!raw) return null;
-    return typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return safeJson(typeof raw === 'string' ? raw : JSON.stringify(raw), null);
   },
 
   async deletePending(email) {
@@ -159,7 +165,8 @@ const db = {
     const k = key.trim().toUpperCase();
     const raw = await redis.get(`key:${k}`);
     if (!raw) return { ok: false, reason: 'Ключ не найден' };
-    const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    const data = safeJson(typeof raw === 'string' ? raw : JSON.stringify(raw), null);
+    if (!data) return { ok: false, reason: 'Ключ не найден' };
     if (data.used === 'true' || data.used === true) return { ok: false, reason: 'Ключ уже использован' };
     data.used = 'true'; data.usedBy = userId; data.usedAt = new Date().toISOString();
     await redis.set(`key:${k}`, JSON.stringify(data), { ex: 86400 });
@@ -169,7 +176,7 @@ const db = {
   async getAllKeys() {
     const keys = await redis.smembers('keys:all') || [];
     const all = await Promise.all(keys.map(k => redis.get(`key:${k}`)));
-    return all.filter(Boolean).map(r => typeof r === 'string' ? JSON.parse(r) : r);
+    return all.filter(Boolean).map(r => safeJson(typeof r === 'string' ? r : JSON.stringify(r), {}));
   },
 
   // ── Баланс ────────────────────────────────────────────────
