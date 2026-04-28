@@ -69,13 +69,12 @@ bot.action(/^buy_(.+)$/, async (ctx) => {
   await ctx.answerCbQuery();
   await ctx.reply(
     `📦 *${product.name}*\n💰 Цена: *${product.price}₽*\n\n` +
-    `Для оплаты переведите *${product.price}₽* по СБП:\n` +
-    `📱 Напишите нам — пришлём реквизиты\n\n` +
-    `После оплаты нажмите кнопку ниже и отправьте скриншот чека.`,
+    `Выберите способ оплаты:`,
     {
       parse_mode: 'Markdown',
       ...Markup.inlineKeyboard([
-        [Markup.button.callback('✅ Я оплатил', `paid_${productId}`)],
+        [Markup.button.url(`💳 FanPay (карта/СБП)`, `https://funpay.com/users/17389840/`)],
+        [Markup.button.callback('✅ Я оплатил — отправить чек', `paid_${productId}`)],
         [Markup.button.callback('◀️ Назад', 'back_shop')]
       ])
     }

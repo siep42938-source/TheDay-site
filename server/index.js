@@ -156,6 +156,31 @@ app.get('/api/user/me', auth, (req,res)=>{
   if(!u) return res.status(404).json({error:'Не найден'});
   res.json({user:safe(u)});
 });
+
+// Привязать HWID (вызывается при первом входе с устройства)
+app.post('/api/user/bind-hwid', auth, lim(10), (req,res)=>{
+  const {hwid}=req.body;
+  if(!hwid) return res.status(400).json({error:'HWID не указан'});
+  const u=db.findUserById(req.user.id);
+  if(!u) return res.status(404).json({error:'Не найден'});
+
+  // HWID проверяется только для платных пользователей
+  const hasSub = u.sub && (u.sub === 'Навсегда' || (u.subExpires && new Date(u.subExpires) > new Date()));
+
+  if (!hasSub) {
+    // Без подписки — HWID не привязываем, пускаем с любого устройства
+    return res.json({ok:true, user:safe(u)});
+  }
+
+  // С подпиской — привязываем HWID
+  if(u.hwid && u.hwid !== hwid) {
+    return res.status(403).json({error:'Этот аккаунт привязан к другому устройству. Сбросьте HWID в личном кабинете.'});
+  }
+  if(!u.hwid) {
+    db.updateUser(req.user.id, {hwid});
+  }
+  res.json({ok:true, user:safe(db.findUserById(req.user.id))});
+});
 app.patch('/api/user/me', auth, async (req,res)=>{
   const {avatar,username}=req.body; const upd={};
   if(avatar!==undefined){ if(avatar&&avatar.length>400*1024) return res.status(400).json({error:'Аватар слишком большой'}); upd.avatar=avatar; }
@@ -201,11 +226,22 @@ app.post('/api/user/activate-key', auth, lim(20), (req,res)=>{
 app.post('/api/user/reset-hwid', auth, lim(5), (req,res)=>{
   const u=db.findUserById(req.user.id);
   if(!u) return res.status(404).json({error:'Не найден'});
-  if(u.lastHwidReset&&Date.now()-new Date(u.lastHwidReset).getTime()<30*86400000){
-    const d=Math.ceil((30*86400000-(Date.now()-new Date(u.lastHwidReset).getTime()))/86400000);
-    return res.status(429).json({error:`Сброс доступен через ${d} дн.`});
+
+  // Первый сброс — бесплатно
+  if(!u.lastHwidReset) {
+    return res.json({ok:true, free:true, user:safe(db.updateUser(req.user.id,{hwid:null,lastHwidReset:new Date().toISOString()}))});
   }
-  res.json({ok:true,user:safe(db.updateUser(req.user.id,{hwid:null,lastHwidReset:new Date().toISOString()}))});
+
+  // Последующие — раз в 30 дней или за покупку
+  if(Date.now()-new Date(u.lastHwidReset).getTime()<30*86400000){
+    const d=Math.ceil((30*86400000-(Date.now()-new Date(u.lastHwidReset).getTime()))/86400000);
+    return res.status(429).json({
+      error:`Бесплатный сброс уже использован. Следующий через ${d} дн. или купите сброс в магазине.`,
+      canBuy: true
+    });
+  }
+
+  res.json({ok:true, user:safe(db.updateUser(req.user.id,{hwid:null,lastHwidReset:new Date().toISOString()}))});
 });
 
 // ══ ADMIN PANEL ═══════════════════════════════════════════
@@ -278,7 +314,7 @@ app.post('/api/launcher/login', launcher, lim(10,5), async (req,res)=>{
   const hasSub=user.sub&&(user.sub==='Навсегда'||(user.subExpires&&new Date(user.subExpires)>new Date()));
   if(!hasSub) return res.status(403).json({error:'Нет активной подписки. Купите на thedayclient.su'});
 
-  // HWID привязка
+  // HWID привязка только для платных
   if(hwid){
     if(!user.hwid){ db.updateUser(user.id,{hwid}); }
     else if(user.hwid!==hwid){ return res.status(403).json({error:'HWID не совпадает. Сбросьте HWID в личном кабинете.'}); }

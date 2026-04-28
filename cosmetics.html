@@ -5,53 +5,335 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Косметика — TheDay Client</title>
   <meta http-equiv="X-Frame-Options" content="DENY"/>
+  <meta http-equiv="X-Content-Type-Options" content="nosniff"/>
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://the-day-site-ovk7.vercel.app; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"/>
   <link rel="stylesheet" href="style.css"/>
   <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" crossorigin="anonymous"/>
   <style>
-    .cosm-page { display:flex; gap:24px; margin-bottom:28px; }
-    .cosm-char-wrap { width:200px; min-width:200px; background:rgba(13,13,20,0.8); border:1px solid rgba(135,206,235,0.1); border-radius:16px; padding:20px; display:flex; flex-direction:column; align-items:center; gap:12px; }
-    #charCanvas { border-radius:10px; background:radial-gradient(ellipse at 50% 80%, rgba(135,206,235,0.08) 0%, transparent 70%); }
-    .cosm-char-label { font-size:11px; color:#4a5568; text-transform:uppercase; letter-spacing:1.5px; }
-    .cosm-slots { flex:1; background:rgba(13,13,20,0.8); border:1px solid rgba(135,206,235,0.1); border-radius:16px; padding:24px; }
-    .cosm-slots-title { font-size:15px; font-weight:700; color:#fff; margin-bottom:4px; }
-    .cosm-slots-sub { font-size:12px; color:#4a5568; margin-bottom:20px; }
-    .cosm-slot { display:flex; align-items:center; gap:14px; padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
-    .cosm-slot:last-child { border-bottom:none; }
-    .cosm-slot-ico { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
-    .cosm-slot-info { flex:1; }
-    .cosm-slot-type { font-size:11px; color:#4a5568; text-transform:uppercase; letter-spacing:1px; margin-bottom:2px; }
-    .cosm-slot-name { font-size:13px; color:#718096; font-weight:500; }
-    .cosm-slot-name.equipped { color:#87CEEB; }
-    .cosm-tabs-row { display:flex; gap:8px; margin-bottom:20px; }
-    .cosm-tab { padding:8px 22px; border-radius:20px; font-size:13px; font-weight:600; cursor:pointer; border:1px solid rgba(135,206,235,0.15); background:transparent; color:#718096; transition:all .2s; font-family:inherit; }
-    .cosm-tab.active { background:rgba(135,206,235,0.15); border-color:rgba(135,206,235,0.4); color:#87CEEB; }
-    .cosm-cats-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:24px; }
-    .cosm-cat { padding:6px 16px; border-radius:20px; font-size:12px; font-weight:500; cursor:pointer; border:1px solid rgba(255,255,255,0.07); background:transparent; color:#718096; transition:all .2s; font-family:inherit; }
-    .cosm-cat.active { background:rgba(135,206,235,0.1); border-color:rgba(135,206,235,0.3); color:#87CEEB; }
-    .cosm-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
-    .cosm-card { background:rgba(13,13,20,0.8); border:1px solid rgba(135,206,235,0.07); border-radius:14px; overflow:hidden; cursor:pointer; transition:transform .2s, border-color .2s, box-shadow .2s; position:relative; }
-    .cosm-card:hover { transform:translateY(-4px); border-color:rgba(135,206,235,0.25); box-shadow:0 12px 32px rgba(0,0,0,0.5); }
-    .cosm-card-img { width:100%; aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:44px; position:relative; }
-    .cosm-card-img::after { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at 50% 100%, rgba(135,206,235,0.06) 0%, transparent 70%); pointer-events:none; }
-    .cosm-card-body { padding:12px 14px 14px; }
-    .cosm-card-cat { font-size:10px; color:#4a5568; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:4px; }
-    .cosm-card-name { font-size:14px; font-weight:700; color:#e2e8f0; margin-bottom:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .cosm-card-footer { display:flex; align-items:center; justify-content:space-between; }
-    .cosm-card-price { font-size:15px; font-weight:800; color:#87CEEB; }
-    .cosm-card-price.free { color:#34d399; }
-    .cosm-card-btn { padding:5px 14px; border-radius:20px; font-size:11px; font-weight:700; cursor:pointer; border:none; font-family:inherit; transition:all .2s; }
-    .cosm-card-btn.buy { background:rgba(135,206,235,0.12); color:#87CEEB; border:1px solid rgba(135,206,235,0.25); }
-    .cosm-card-btn.buy:hover { background:rgba(135,206,235,0.22); }
-    .cosm-card-btn.free { background:linear-gradient(135deg,#34d399,#059669); color:#fff; }
-    .cosm-card-btn.owned { background:rgba(52,211,153,0.12); color:#34d399; border:1px solid rgba(52,211,153,0.3); }
-    .cosm-card-btn.nofunds { background:rgba(255,255,255,0.04); color:#4a5568; cursor:not-allowed; }
-    .cosm-new { position:absolute; top:8px; right:8px; background:linear-gradient(135deg,#ef4444,#dc2626); color:#fff; font-size:9px; font-weight:800; letter-spacing:1px; padding:2px 8px; border-radius:20px; z-index:1; }
-    .cosm-modal-img { font-size:80px; margin-bottom:16px; display:block; text-align:center; filter:drop-shadow(0 0 20px var(--cosm-color,#87CEEB)); }
-    @media(max-width:900px) { .cosm-page{flex-direction:column} .cosm-char-wrap{width:100%;flex-direction:row;padding:16px} .cosm-grid{grid-template-columns:repeat(2,1fr)} }
-    @media(max-width:500px) { .cosm-grid{grid-template-columns:1fr 1fr} }
+    .cosm-layout{display:flex;gap:20px;align-items:flex-start}
+    .cosm-viewer{width:220px;min-width:220px;background:rgba(13,13,20,0.9);border:1px solid rgba(135,206,235,0.15);border-radius:16px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:10px;position:sticky;top:90px}
+    .cosm-viewer-title{font-size:11px;color:#4a5568;text-transform:uppercase;letter-spacing:1.5px}
+    #steveCanvas{border-radius:12px;cursor:grab;background:radial-gradient(ellipse at 50% 80%,rgba(135,206,235,0.1) 0%,rgba(10,10,18,0.8) 100%);border:1px solid rgba(135,206,235,0.08)}
+    #steveCanvas:active{cursor:grabbing}
+    .cosm-viewer-hint{font-size:10px;color:#2d3748;text-align:center}
+    .cosm-equipped{width:100%;display:flex;flex-direction:column;gap:6px;margin-top:4px}
+    .cosm-eq-row{display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(135,206,235,0.04);border-radius:8px;border:1px solid rgba(135,206,235,0.06)}
+    .cosm-eq-slot{font-size:10px;color:#4a5568;width:50px;flex-shrink:0}
+    .cosm-eq-name{font-size:11px;color:#87CEEB;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .cosm-eq-none{font-size:11px;color:#2d3748}
+    .cosm-right{flex:1;min-width:0}
+    .cosm-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+    .cosm-tab{padding:7px 18px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(135,206,235,0.15);background:transparent;color:#718096;transition:all .2s;font-family:inherit}
+    .cosm-tab.active{background:rgba(135,206,235,0.15);border-color:rgba(135,206,235,0.4);color:#87CEEB}
+    .cosm-cats{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+    .cosm-cat{padding:5px 14px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid rgba(255,255,255,0.07);background:transparent;color:#718096;transition:all .2s;font-family:inherit}
+    .cosm-cat.active{background:rgba(135,206,235,0.1);border-color:rgba(135,206,235,0.3);color:#87CEEB}
+    .cosm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+    .cosm-card{background:rgba(13,13,20,0.8);border:1px solid rgba(135,206,235,0.07);border-radius:12px;overflow:hidden;cursor:pointer;transition:all .2s;position:relative}
+    .cosm-card:hover{transform:translateY(-3px);border-color:rgba(135,206,235,0.25);box-shadow:0 8px 24px rgba(0,0,0,0.5)}
+    .cosm-card.equipped-card{border-color:rgba(52,211,153,0.4);box-shadow:0 0 12px rgba(52,211,153,0.15)}
+    .cosm-card-preview{width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:40px;background:rgba(0,0,0,0.2);position:relative}
+    .cosm-card-body{padding:10px 12px 12px}
+    .cosm-card-cat{font-size:9px;color:#4a5568;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px}
+    .cosm-card-name{font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .cosm-card-footer{display:flex;align-items:center;justify-content:space-between}
+    .cosm-price{font-size:13px;font-weight:800;color:#87CEEB}
+    .cosm-price.free{color:#34d399}
+    .cosm-price.owned{color:#34d399}
+    .cosm-btn{padding:4px 12px;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;border:none;font-family:inherit;transition:all .2s}
+    .cosm-btn.buy{background:rgba(135,206,235,0.12);color:#87CEEB;border:1px solid rgba(135,206,235,0.25)}
+    .cosm-btn.equip{background:rgba(52,211,153,0.12);color:#34d399;border:1px solid rgba(52,211,153,0.3)}
+    .cosm-btn.equipped{background:rgba(52,211,153,0.2);color:#34d399;border:1px solid rgba(52,211,153,0.5)}
+    .cosm-btn.free-btn{background:linear-gradient(135deg,#34d399,#059669);color:#fff}
+    .cosm-new{position:absolute;top:6px;right:6px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-size:8px;font-weight:800;letter-spacing:1px;padding:2px 6px;border-radius:10px;z-index:1}
+    .cosm-rarity{position:absolute;bottom:6px;left:6px;font-size:8px;font-weight:700;padding:2px 6px;border-radius:10px}
+    .rarity-common{background:rgba(255,255,255,0.08);color:#718096}
+    .rarity-rare{background:rgba(79,195,247,0.15);color:#4fc3f7}
+    .rarity-epic{background:rgba(167,139,250,0.15);color:#a78bfa}
+    .rarity-legendary{background:rgba(251,191,36,0.15);color:#fbbf24}
+    @media(max-width:768px){.cosm-layout{flex-direction:column}.cosm-viewer{width:100%;position:static;flex-direction:row;padding:12px}.cosm-equipped{display:none}}
   </style>
 </head>
 <body>
 <canvas id="spaceCanvas"></canvas>
 <div class="page-transition" id="pageTransition"></div>
+
+<nav class="navbar" id="navbar">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <svg width="16" height="16" viewBox="0 0 18 18"><path d="M9 1L11.5 6.5H17L12.5 10L14.5 16L9 12.5L3.5 16L5.5 10L1 6.5H6.5L9 1Z" fill="#87CEEB"/></svg>
+      TheDay
+    </a>
+    <ul class="nav-links">
+      <li><a href="account.html" class="nav-active">Аккаунт</a></li>
+      <li><a href="index.html#buy">Покупка</a></li>
+      <li><a href="referrals.html">Рефералы</a></li>
+    </ul>
+    <div class="nav-burger" id="navBurger" onclick="toggleBurger()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      <div class="burger-dropdown" id="burgerDropdown"></div>
+    </div>
+  </div>
+</nav>
+
+<div class="dashboard-layout">
+  <aside class="dash-sidebar">
+    <div class="dash-sidebar-title">Мой профиль</div>
+    <nav class="dash-nav">
+      <a href="account.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Аккаунт</a>
+      <a href="balance.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Баланс</a>
+      <a href="shop.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Магазин</a>
+      <a href="daily-bonus.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>Ежедневный бонус</a>
+      <a href="configs.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Магазин конфигов</a>
+      <a href="download.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Скачать клиент</a>
+      <a href="content.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>Создать контент</a>
+      <a href="config-keys.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>Ключи конфигов</a>
+      <a href="cosmetics.html" class="dash-nav-item active"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Косметика</a>
+      <a href="support.html" class="dash-nav-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Поддержка</a>
+      <a href="#" onclick="Auth.logout();return false;" class="dash-nav-item" style="color:#ef5350;border-top:1px solid rgba(255,255,255,0.05);margin-top:8px;padding-top:12px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Выйти</a>
+    </nav>
+  </aside>
+
+  <main class="dash-main">
+    <div class="dash-breadcrumb"><a href="index.html">Главная</a><span>›</span><a href="account.html">Мой профиль</a><span>›</span>Косметика</div>
+    <div style="font-size:24px;font-weight:800;color:#fff;margin-bottom:6px">Косметика</div>
+    <div style="font-size:13px;color:#4a5568;margin-bottom:24px">Настройте внешний вид вашего персонажа</div>
+
+    <div class="cosm-layout">
+      <!-- 3D Viewer -->
+      <div class="cosm-viewer">
+        <div class="cosm-viewer-title">Предпросмотр</div>
+        <canvas id="steveCanvas" width="188" height="240"></canvas>
+        <div class="cosm-viewer-hint">Перетащите для вращения</div>
+        <div class="cosm-equipped" id="equippedList">
+          <div class="cosm-eq-row"><span class="cosm-eq-slot">Шляпа</span><span class="cosm-eq-none" id="eq-hat">Нет</span></div>
+          <div class="cosm-eq-row"><span class="cosm-eq-slot">Плащ</span><span class="cosm-eq-none" id="eq-cape">Нет</span></div>
+          <div class="cosm-eq-row"><span class="cosm-eq-slot">Скин</span><span class="cosm-eq-none" id="eq-skin">Стандартный</span></div>
+          <div class="cosm-eq-row"><span class="cosm-eq-slot">Эффект</span><span class="cosm-eq-none" id="eq-effect">Нет</span></div>
+        </div>
+      </div>
+
+      <!-- Items -->
+      <div class="cosm-right">
+        <div class="cosm-tabs">
+          <button class="cosm-tab active" onclick="setTab('all',this)">Все</button>
+          <button class="cosm-tab" onclick="setTab('owned',this)">Мои</button>
+          <button class="cosm-tab" onclick="setTab('shop',this)">Магазин</button>
+        </div>
+        <div class="cosm-cats">
+          <button class="cosm-cat active" onclick="setCat('all',this)">Все</button>
+          <button class="cosm-cat" onclick="setCat('skin',this)">Скины</button>
+          <button class="cosm-cat" onclick="setCat('hat',this)">Шляпы</button>
+          <button class="cosm-cat" onclick="setCat('cape',this)">Плащи</button>
+          <button class="cosm-cat" onclick="setCat('effect',this)">Эффекты</button>
+        </div>
+        <div class="cosm-grid" id="cosmGrid"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
+  <div class="glass-card modal-box" onclick="event.stopPropagation()" style="max-width:380px">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script src="api.js"></script><script src="auth.js"></script><script src="smooth.js"></script><script src="theme.js"></script><script src="main.js"></script><script src="steve3d.js"></script>
+<script>
+const user = Auth.currentUser();
+if (!user) window.location.href = 'login.html';
+
+// Инициализация 3D Стива
+const canvas = document.getElementById('steveCanvas');
+const steve = new Steve3D(canvas);
+
+// Каталог косметики
+const ITEMS = [
+  // Скины
+  { id:'skin_steve',   cat:'skin',   name:'Steve',        emoji:'🧑',  rarity:'common',    price:0,    free:true,  color:'#c8a882' },
+  { id:'skin_alex',    cat:'skin',   name:'Alex',         emoji:'👩',  rarity:'common',    price:0,    free:true,  color:'#c8a882' },
+  { id:'skin_space',   cat:'skin',   name:'Space Suit',   emoji:'👨‍🚀', rarity:'rare',      price:199,  free:false, color:'#4fc3f7', isNew:true },
+  { id:'skin_ninja',   cat:'skin',   name:'Ninja',        emoji:'🥷',  rarity:'epic',      price:399,  free:false, color:'#6366f1' },
+  { id:'skin_zombie',  cat:'skin',   name:'Zombie',       emoji:'🧟',  rarity:'rare',      price:249,  free:false, color:'#4ade80' },
+  { id:'skin_robot',   cat:'skin',   name:'Robot',        emoji:'🤖',  rarity:'legendary', price:799,  free:false, color:'#fbbf24', isNew:true },
+  // Шляпы
+  { id:'hat_none',     cat:'hat',    name:'Без шляпы',    emoji:'❌',  rarity:'common',    price:0,    free:true,  color:'#4a5568' },
+  { id:'hat_crown',    cat:'hat',    name:'Корона',       emoji:'👑',  rarity:'legendary', price:999,  free:false, color:'#fbbf24' },
+  { id:'hat_santa',    cat:'hat',    name:'Санта',        emoji:'🎅',  rarity:'rare',      price:299,  free:false, color:'#ef4444' },
+  { id:'hat_wizard',   cat:'hat',    name:'Волшебник',    emoji:'🧙',  rarity:'epic',      price:499,  free:false, color:'#a78bfa', isNew:true },
+  { id:'hat_cowboy',   cat:'hat',    name:'Ковбой',       emoji:'🤠',  rarity:'rare',      price:249,  free:false, color:'#d97706' },
+  // Плащи
+  { id:'cape_none',    cat:'cape',   name:'Без плаща',    emoji:'❌',  rarity:'common',    price:0,    free:true,  color:'#4a5568' },
+  { id:'cape_theday',  cat:'cape',   name:'TheDay Cape',  emoji:'🌊',  rarity:'epic',      price:599,  free:false, color:'#87CEEB', isNew:true },
+  { id:'cape_fire',    cat:'cape',   name:'Fire Cape',    emoji:'🔥',  rarity:'legendary', price:899,  free:false, color:'#f97316' },
+  { id:'cape_galaxy',  cat:'cape',   name:'Galaxy',       emoji:'🌌',  rarity:'epic',      price:699,  free:false, color:'#6366f1' },
+  // Эффекты
+  { id:'fx_none',      cat:'effect', name:'Без эффекта',  emoji:'❌',  rarity:'common',    price:0,    free:true,  color:'#4a5568' },
+  { id:'fx_stars',     cat:'effect', name:'Звёзды',       emoji:'✨',  rarity:'rare',      price:349,  free:false, color:'#fbbf24' },
+  { id:'fx_fire',      cat:'effect', name:'Огонь',        emoji:'🔥',  rarity:'epic',      price:549,  free:false, color:'#f97316', isNew:true },
+  { id:'fx_rainbow',   cat:'effect', name:'Радуга',       emoji:'🌈',  rarity:'legendary', price:999,  free:false, color:'#a78bfa' },
+];
+
+const RARITY_LABEL = { common:'Обычный', rare:'Редкий', epic:'Эпический', legendary:'Легендарный' };
+
+let currentTab = 'all';
+let currentCat = 'all';
+let owned = JSON.parse(localStorage.getItem('td_cosm_owned') || '["skin_steve","skin_alex","hat_none","cape_none","fx_none"]');
+let equipped = JSON.parse(localStorage.getItem('td_cosm_equipped') || '{"skin":"skin_steve","hat":"hat_none","cape":"cape_none","effect":"fx_none"}');
+
+function saveOwned() { localStorage.setItem('td_cosm_owned', JSON.stringify(owned)); }
+function saveEquipped() { localStorage.setItem('td_cosm_equipped', JSON.stringify(equipped)); }
+
+function setTab(tab, btn) {
+  currentTab = tab;
+  document.querySelectorAll('.cosm-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGrid();
+}
+
+function setCat(cat, btn) {
+  currentCat = cat;
+  document.querySelectorAll('.cosm-cat').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGrid();
+}
+
+function renderGrid() {
+  let items = ITEMS;
+  if (currentCat !== 'all') items = items.filter(i => i.cat === currentCat);
+  if (currentTab === 'owned') items = items.filter(i => owned.includes(i.id));
+  if (currentTab === 'shop') items = items.filter(i => !i.free && !owned.includes(i.id));
+
+  const grid = document.getElementById('cosmGrid');
+  grid.innerHTML = '';
+
+  items.forEach(item => {
+    const isOwned = owned.includes(item.id);
+    const isEquipped = Object.values(equipped).includes(item.id);
+    const card = document.createElement('div');
+    card.className = 'cosm-card' + (isEquipped ? ' equipped-card' : '');
+    card.onclick = () => openItem(item);
+
+    card.innerHTML = `
+      ${item.isNew ? '<div class="cosm-new">NEW</div>' : ''}
+      <div class="cosm-card-preview" style="background:linear-gradient(135deg,${item.color}18,${item.color}06)">
+        <span style="font-size:44px;filter:drop-shadow(0 0 12px ${item.color})">${item.emoji}</span>
+        <div class="cosm-rarity rarity-${item.rarity}">${RARITY_LABEL[item.rarity]}</div>
+      </div>
+      <div class="cosm-card-body">
+        <div class="cosm-card-cat">${{skin:'Скин',hat:'Шляпа',cape:'Плащ',effect:'Эффект'}[item.cat]}</div>
+        <div class="cosm-card-name">${item.name}</div>
+        <div class="cosm-card-footer">
+          <span class="cosm-price ${isOwned?'owned':item.free?'free':''}">${isOwned?'✓ Есть':item.free?'Бесплатно':item.price+'₽'}</span>
+          <button class="cosm-btn ${isEquipped?'equipped':isOwned?'equip':item.free?'free-btn':'buy'}" onclick="event.stopPropagation();quickAction('${item.id}')">
+            ${isEquipped?'Надет':isOwned?'Надеть':item.free?'Получить':'Купить'}
+          </button>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function quickAction(id) {
+  const item = ITEMS.find(i => i.id === id);
+  if (!item) return;
+  if (owned.includes(id)) {
+    equipItem(item);
+  } else if (item.free) {
+    owned.push(id);
+    saveOwned();
+    equipItem(item);
+    renderGrid();
+  } else {
+    openItem(item);
+  }
+}
+
+function equipItem(item) {
+  equipped[item.cat === 'effect' ? 'effect' : item.cat] = item.id;
+  saveEquipped();
+  updateEquippedUI();
+  renderGrid();
+  // Обновляем 3D персонажа
+  updateSteve();
+}
+
+function updateEquippedUI() {
+  const getItem = id => ITEMS.find(i => i.id === id);
+  const skinItem = getItem(equipped.skin);
+  const hatItem = getItem(equipped.hat);
+  const capeItem = getItem(equipped.cape);
+  const fxItem = getItem(equipped.effect);
+
+  const setEq = (id, item) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!item || item.id.endsWith('_none')) {
+      el.className = 'cosm-eq-none';
+      el.textContent = 'Нет';
+    } else {
+      el.className = 'cosm-eq-name';
+      el.textContent = item.emoji + ' ' + item.name;
+    }
+  };
+
+  setEq('eq-hat', hatItem);
+  setEq('eq-cape', capeItem);
+  setEq('eq-skin', skinItem);
+  setEq('eq-effect', fxItem);
+}
+
+function updateSteve() {
+  const skinItem = ITEMS.find(i => i.id === equipped.skin);
+  if (skinItem) {
+    // Меняем цвет скина в рендере
+    steve.skinColor = skinItem.color;
+  }
+}
+
+function openItem(item) {
+  const isOwned = owned.includes(item.id);
+  const isEquipped = Object.values(equipped).includes(item.id);
+  document.getElementById('modalContent').innerHTML = `
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:64px;filter:drop-shadow(0 0 20px ${item.color})">${item.emoji}</div>
+      <div class="cosm-rarity rarity-${item.rarity}" style="display:inline-block;margin:8px 0">${RARITY_LABEL[item.rarity]}</div>
+      <h3 style="color:#fff;font-size:18px;margin-bottom:4px">${item.name}</h3>
+      <div style="font-size:12px;color:#4a5568">${{skin:'Скин',hat:'Шляпа',cape:'Плащ',effect:'Эффект'}[item.cat]}</div>
+    </div>
+    ${isOwned ? `
+      <button class="btn-primary" style="width:100%;justify-content:center;border-radius:10px;${isEquipped?'opacity:0.5':''}" onclick="${isEquipped?'':('quickAction(\''+item.id+'\');closeModal()')}" ${isEquipped?'disabled':''}>
+        ${isEquipped ? '✓ Уже надет' : 'Надеть'}
+      </button>
+    ` : item.free ? `
+      <button class="btn-primary" style="width:100%;justify-content:center;border-radius:10px;background:linear-gradient(135deg,#34d399,#059669)" onclick="quickAction('${item.id}');closeModal()">
+        Получить бесплатно
+      </button>
+    ` : `
+      <div style="font-size:28px;font-weight:900;color:#87CEEB;text-align:center;margin-bottom:16px">${item.price}₽</div>
+      <a href="https://funpay.com/users/17389840/" target="_blank" class="btn-primary" style="display:block;text-align:center;border-radius:10px;text-decoration:none;margin-bottom:8px">
+        💳 Купить на FanPay
+      </a>
+      <a href="https://t.me/thedayclient_bot" target="_blank" class="btn-ghost" style="display:block;text-align:center;border-radius:10px;text-decoration:none;font-size:13px">
+        ✈️ @thedayclient_bot
+      </a>
+    `}
+  `;
+  document.getElementById('modalOverlay').classList.add('active');
+}
+
+function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
+
+// Инициализация
+renderGrid();
+updateEquippedUI();
+updateSteve();
+</script>
+</body>
+</html>

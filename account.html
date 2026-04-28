@@ -275,8 +275,13 @@ const modals = {
     <div id="passResult" style="margin-top:10px;font-size:13px;text-align:center"></div>`,
   hwid: `
     <h3>Сбросить HWID</h3>
-    <p style="color:var(--muted);margin:12px 0 20px">Вы уверены? Сброс HWID доступен раз в 30 дней. После сброса лаунчер привяжет новый HWID при следующем входе.</p>
-    <button class="btn-primary" style="width:100%;justify-content:center;border-radius:10px;background:linear-gradient(135deg,#ef5350,#b71c1c)" onclick="resetHwid()">Сбросить HWID</button>`
+    <p style="color:var(--muted);margin:12px 0 8px">Сброс привязки устройства.</p>
+    <div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);border-radius:8px;padding:10px 14px;font-size:12px;color:#34d399;margin-bottom:16px">
+      ✓ Первый сброс — бесплатно<br>
+      <span style="color:#4a5568">Последующие — раз в 30 дней или купите в магазине</span>
+    </div>
+    <button class="btn-primary" style="width:100%;justify-content:center;border-radius:10px;background:linear-gradient(135deg,#ef5350,#b71c1c)" onclick="resetHwid()">Сбросить HWID</button>
+    <a href="shop.html" style="display:block;text-align:center;margin-top:10px;font-size:12px;color:#87CEEB">Купить сброс HWID в магазине →</a>`
 };
 
 // ── Действия ─────────────────────────────────────────────
@@ -296,33 +301,29 @@ function saveUsername() {
 async function activateKey() {
   const key = (document.getElementById('keyInput')?.value || '').trim().toUpperCase();
   if (!key) { setResult('keyResult', false, 'Введите ключ'); return; }
+
+  // Проверяем формат
+  if (!/^THEDAY-[A-Z0-9]+-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(key)) {
+    setResult('keyResult', false, 'Неверный формат ключа. Пример: THEDAY-30DAYS-XXXX-XXXX');
+    return;
+  }
+
   try {
-    let u;
     const token = localStorage.getItem('td_token');
-    const serverOk = await Auth.hasServer();
+    if (!token) { setResult('keyResult', false, 'Войдите в аккаунт'); return; }
 
-    if (serverOk && token) {
-      try {
-        const data = await API.user.activateKey({ key });
-        u = data.user;
-        localStorage.setItem('td_user', JSON.stringify(u));
-      } catch(serverErr) {
-        // Если сервер вернул ошибку — пробуем локально
-        if (serverErr.message.includes('Неверный ключ') || serverErr.message.includes('активации')) {
-          throw serverErr;
-        }
-        // Иначе fallback на локальный режим
-        u = Auth.activateKey(key);
-      }
-    } else {
-      u = Auth.activateKey(key);
-    }
+    // Всегда используем сервер для активации
+    const data = await API.user.activateKey({ key });
+    const u = data.user;
+    localStorage.setItem('td_user', JSON.stringify(u));
 
-    setResult('keyResult', true, `✓ Подписка "${u.sub}" активирована!`);
+    setResult('keyResult', true, `✓ ${data.message || 'Подписка активирована!'}`);
     document.getElementById('infoSubExpires').textContent =
       u.sub === 'Навсегда' ? 'Навсегда' : u.subExpires ? fmtDate(u.subExpires) : '—';
     document.getElementById('keyInput').value = '';
-  } catch(e) { setResult('keyResult', false, e.message); }
+  } catch(e) {
+    setResult('keyResult', false, e.message);
+  }
 }
 
 async function changePass() {
@@ -333,28 +334,56 @@ async function changePass() {
   if (n1 !== n2) { setResult('passResult', false, 'Пароли не совпадают'); return; }
   if (n1.length < 6) { setResult('passResult', false, 'Минимум 6 символов'); return; }
   try {
-    const u = Auth.currentUser();
-    if (!u) { setResult('passResult', false, 'Не авторизован'); return; }
-    const hash = await Auth.hash(cur);
-    const users = Auth.getUsers();
-    const found = users.find(x => x.id === u.id);
-    if (!found || found.passwordHash !== hash) {
-      setResult('passResult', false, 'Неверный текущий пароль'); return;
+    const token = localStorage.getItem('td_token');
+    if (token) {
+      await API.user.changePassword({ currentPassword: cur, newPassword: n1 });
+    } else {
+      const u = Auth.currentUser();
+      if (!u) { setResult('passResult', false, 'Не авторизован'); return; }
+      const hash = await Auth.hash(cur);
+      const users = Auth.getUsers();
+      const found = users.find(x => x.id === u.id);
+      if (!found || found.passwordHash !== hash) {
+        setResult('passResult', false, 'Неверный текущий пароль'); return;
+      }
+      const newHash = await Auth.hash(n1);
+      Auth.updateProfile({ passwordHash: newHash });
     }
-    const newHash = await Auth.hash(n1);
-    Auth.updateProfile({ passwordHash: newHash });
     setResult('passResult', true, '✓ Пароль изменён');
     setTimeout(closeModal, 1500);
   } catch(e) { setResult('passResult', false, e.message); }
 }
 
-function resetHwid() {
+async function resetHwid() {
   try {
-    Auth.updateProfile({ hwid: null });
-    const el = document.getElementById('infoHwid');
-    if (el) el.textContent = 'Не привязан';
-    closeModal();
-  } catch(e) { console.error('resetHwid:', e); }
+    const token = localStorage.getItem('td_token');
+    if (token) {
+      const data = await API.user.resetHwid();
+      const u = data.user;
+      localStorage.setItem('td_user', JSON.stringify(u));
+      const el = document.getElementById('infoHwid');
+      if (el) el.textContent = 'Не привязан';
+      closeModal();
+      if (data.free) alert('✓ Первый сброс использован (бесплатно)');
+    } else {
+      Auth.updateProfile({ hwid: null });
+      const el = document.getElementById('infoHwid');
+      if (el) el.textContent = 'Не привязан';
+      closeModal();
+    }
+  } catch(e) {
+    const content = document.getElementById('modalContent');
+    const existing = content.querySelector('.hwid-err');
+    if (existing) existing.remove();
+    const div = document.createElement('div');
+    div.className = 'hwid-err';
+    div.style.cssText = 'margin-top:10px';
+    div.innerHTML = `<div style="color:#ef5350;font-size:13px;text-align:center;margin-bottom:8px">${e.message}</div>`;
+    if (e.message.includes('купите') || e.message.includes('магазин')) {
+      div.innerHTML += `<a href="shop.html" class="btn-primary" style="display:block;text-align:center;border-radius:10px;text-decoration:none;font-size:13px">Купить сброс HWID →</a>`;
+    }
+    content.appendChild(div);
+  }
 }
 </script>
 </body>

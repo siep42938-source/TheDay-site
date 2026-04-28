@@ -166,11 +166,20 @@ function buyItem(name, price) {
     <div style="font-size:32px;margin-bottom:12px">🛒</div>
     <h3 style="color:#fff;margin-bottom:8px">${name}</h3>
     <div style="font-size:24px;font-weight:900;color:#87CEEB;margin-bottom:16px">${price}</div>
-    <p style="font-size:13px;color:#4a5568;margin-bottom:8px">Оплатите через Telegram бот — получите ключ автоматически после подтверждения оплаты.</p>
-    <p style="font-size:11px;color:#4a5568;margin-bottom:20px">⚠️ Ключ действителен 24 часа — активируйте сразу!</p>
-    <a href="https://t.me/thedayclient_bot" target="_blank" class="btn-primary" style="border-radius:10px;text-decoration:none;display:block;text-align:center;width:100%">
-      ✈️ Купить в @thedayclient_bot
-    </a>
+    <div style="font-size:13px;color:#4a5568;margin-bottom:16px">Выберите способ оплаты:</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <a href="https://funpay.com/users/17389840/" target="_blank" class="btn-primary" style="border-radius:10px;text-decoration:none;display:block;text-align:center">
+        💳 FanPay (карта / СБП)
+      </a>
+      <div style="background:rgba(135,206,235,0.05);border:1px solid rgba(135,206,235,0.15);border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:11px;color:#4a5568;margin-bottom:6px">Перевод на карту (СБП)</div>
+        <div style="font-size:16px;font-weight:700;color:#87CEEB;letter-spacing:2px;font-family:monospace">2200 7019 9096 3829</div>
+      </div>
+      <a href="https://t.me/thedayclient_bot" target="_blank" class="btn-ghost" style="border-radius:10px;text-decoration:none;display:block;text-align:center">
+        ✈️ После оплаты — написать боту @thedayclient_bot
+      </a>
+    </div>
+    <p style="font-size:11px;color:#4a5568;margin-top:12px;text-align:center">⚠️ Ключ действителен 24 часа — активируйте сразу!</p>
   `;
   document.getElementById('modalOverlay').classList.add('active');
 }
