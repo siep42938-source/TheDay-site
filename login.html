@@ -137,18 +137,7 @@ function showErr(id, msg) {
 const SERVER = 'https://the-day-site-ovk7.vercel.app/api';
 
 async function apiPost(path, body) {
-  const r = await fetch(SERVER + path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  const contentType = r.headers.get('content-type');
-  if (!contentType || !contentType.includes('application/json')) {
-    throw new Error('Сервер недоступен');
-  }
-  const d = await r.json();
-  if (!r.ok) throw new Error(d.error || 'Ошибка сервера');
-  return d;
+  return API.post(path, body);
 }
 
 function showDevCode(code, email) {

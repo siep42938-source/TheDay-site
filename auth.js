@@ -9,21 +9,10 @@ const Auth = {
   _serverCache: null,
   _serverCacheTime: 0,
   async hasServer() {
-    const now = Date.now();
-    if (this._serverCache !== null && now - this._serverCacheTime < 30000) {
-      return this._serverCache;
-    }
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
-      const r = await fetch('https://the-day-site-ovk7.vercel.app/api/health', { signal: controller.signal });
-      clearTimeout(timeoutId);
-      this._serverCache = r.ok;
-    } catch {
-      this._serverCache = false;
-    }
-    this._serverCacheTime = now;
-    return this._serverCache;
+    // Всегда используем Vercel бэкенд
+    this._serverCache = true;
+    this._serverCacheTime = Date.now();
+    return true;
   },
 
   // Получить всех пользователей

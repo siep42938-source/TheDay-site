@@ -136,21 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function apiPost(path, body) {
-  const r = await fetch(SERVER + path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-
-  // Проверяем что ответ содержит JSON
-  const contentType = r.headers.get('content-type');
-  if (!contentType || !contentType.includes('application/json')) {
-    throw new Error('Сервер недоступен. Используется локальный режим.');
-  }
-
-  const d = await r.json();
-  if (!r.ok) throw new Error(d.error || 'Ошибка сервера');
-  return d;
+  return API.post(path, body);
 }
 
 async function sendRegCode() {
