@@ -250,14 +250,16 @@ const Auth = {
   // ── ВХОД ────────────────────────────────────────────────
   async loginSend({ email, password }) {
     if (!email || !password) throw new Error('Заполните все поля');
-    const user = this.findByEmail(email);
+    // Ищем по email или по никнейму
+    let user = this.findByEmail(email);
+    if (!user) user = this.findByUsername(email);
     if (!user) throw new Error('Неверный email или пароль');
     const hash = await this.hash(password);
     if (hash !== user.passwordHash) throw new Error('Неверный email или пароль');
 
-    const code = this.saveOTP(email, this.genOTP(), 'login');
-    this._showDevCode(code, email);
-    return { ok: true, message: `Код отправлен` };
+    const code = this.saveOTP(user.email, this.genOTP(), 'login');
+    this._showDevCode(code, user.email);
+    return { ok: true, email: user.email, message: `Код отправлен` };
   },
 
   async loginVerify({ email, code }) {
