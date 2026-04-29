@@ -8,6 +8,8 @@ import java.io.*;
 import java.net.*;
 import java.nio.file.*;
 import java.util.*;
+import java.util.List;
+import java.util.ArrayList;
 import javax.imageio.ImageIO;
 import javax.swing.text.JTextComponent;
 
@@ -16,22 +18,27 @@ public class TheDayLauncher {
     // ── Константы ─────────────────────────────────────────────────────────────
     static final String MOD_JAR    = "TheDay-1.0.01.jar";
     static final String MOD_URL    = "https://theday-site.pages.dev/TheDay-1.0.01.jar";
-    static final String MC_VERSION = "1.21.11";
-    static final String FABRIC_VER = "0.18.4";
-    static final String FABRIC_URL = "https://maven.fabricmc.net/net/fabricmc/fabric-installer/1.0.1/fabric-installer-1.0.1.jar";
+    static final String MC_VERSION = "1.21.1";
+    static final String FABRIC_VER = "0.16.9";
 
     // Папка клиента на диске C
-    static final String CLIENT_DIR = "C:\\TheDay";
-    static final String CLIENT_MODS = CLIENT_DIR + "\\mods";
-    static final String CLIENT_CONFIGS = CLIENT_DIR + "\\configs";
-    static final String CLIENT_LOGS = CLIENT_DIR + "\\logs";
-    static final String CLIENT_SAVES = CLIENT_DIR + "\\saves";
+    static final String CLIENT_DIR         = "C:\\TheDay";
+    static final String CLIENT_MODS        = CLIENT_DIR + "\\mods";
+    static final String CLIENT_CONFIGS     = CLIENT_DIR + "\\configs";
+    static final String CLIENT_LOGS        = CLIENT_DIR + "\\logs";
+    static final String CLIENT_SAVES       = CLIENT_DIR + "\\saves";
     static final String CLIENT_SCREENSHOTS = CLIENT_DIR + "\\screenshots";
-    static final String CLIENT_RESOURCEPACKS = CLIENT_DIR + "\\resourcepacks";
+    static final String CLIENT_LIBS        = CLIENT_DIR + "\\libraries";
+    static final String CLIENT_VERSIONS    = CLIENT_DIR + "\\versions";
+    static final String CLIENT_ASSETS      = CLIENT_DIR + "\\assets";
+    static final String CLIENT_NATIVES     = CLIENT_DIR + "\\natives";
 
-    // Стандартный .minecraft для Fabric
-    static final String MC_DIR   = System.getProperty("user.home") + "\\AppData\\Roaming\\.minecraft";
-    static final String MODS_DIR = MC_DIR + "\\mods";
+    // Mojang API
+    static final String MC_MANIFEST_URL =
+        "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
+    // Fabric meta
+    static final String FABRIC_LOADER_URL =
+        "https://meta.fabricmc.net/v2/versions/loader/" + MC_VERSION + "/" + FABRIC_VER + "/profile/json";
 
     // Цвета
     static final Color WHITE  = Color.WHITE;
@@ -159,170 +166,165 @@ public class TheDayLauncher {
     // ── Запуск клиента ────────────────────────────────────────────────────────
     static void launchClient(TDProgress pb, JLabel statusTxt, TDBtn launch) {
         try {
-            // ── Шаг 1: Создаём папку C:\TheDay\ со структурой ─────────────
-            status(statusTxt, "Подготовка папки клиента...");
-            pb.setProgress(0.05f);
-            for (String dir : new String[]{
-                CLIENT_DIR, CLIENT_MODS, CLIENT_CONFIGS,
-                CLIENT_LOGS, CLIENT_SAVES, CLIENT_SCREENSHOTS, CLIENT_RESOURCEPACKS
-            }) {
-                new File(dir).mkdirs();
-            }
+            // ── Шаг 1: Создаём C:\TheDay\ ─────────────────────────────────
+            status(statusTxt, "Создание папки клиента...");
+            pb.setProgress(0.02f);
+            for (String d : new String[]{
+                CLIENT_DIR, CLIENT_MODS, CLIENT_CONFIGS, CLIENT_LOGS,
+                CLIENT_SAVES, CLIENT_SCREENSHOTS, CLIENT_LIBS,
+                CLIENT_VERSIONS, CLIENT_ASSETS, CLIENT_NATIVES
+            }) new File(d).mkdirs();
 
-            // Создаём options.txt если нет (базовые настройки)
-            File optionsFile = new File(CLIENT_DIR, "options.txt");
-            if (!optionsFile.exists()) {
-                try (PrintWriter pw = new PrintWriter(optionsFile)) {
+            File opts = new File(CLIENT_DIR, "options.txt");
+            if (!opts.exists()) {
+                try (PrintWriter pw = new PrintWriter(opts)) {
                     pw.println("version:3953");
                     pw.println("autoJump:false");
                     pw.println("fov:0.0");
                     pw.println("renderDistance:12");
                     pw.println("guiScale:3");
                     pw.println("lang:ru_ru");
+                    pw.println("tutorialStep:none");
                 }
             }
 
-            // ── Шаг 2: Устанавливаем мод ──────────────────────────────────
+            // ── Шаг 2: Мод ────────────────────────────────────────────────
             status(statusTxt, "Проверка мода...");
-            pb.setProgress(0.15f);
-
-            File modInClient = new File(CLIENT_MODS, MOD_JAR);
-            File modInMC     = new File(MODS_DIR, MOD_JAR);
-
-            if (!modInClient.exists()) {
-                // Ищем рядом с лаунчером
-                File localMod = null;
+            pb.setProgress(0.05f);
+            File modFile = new File(CLIENT_MODS, MOD_JAR);
+            if (!modFile.exists()) {
+                File local = null;
                 try {
-                    File launcherDir = new File(TheDayLauncher.class
+                    File dir = new File(TheDayLauncher.class
                         .getProtectionDomain().getCodeSource().getLocation().toURI()).getParentFile();
-                    File f = new File(launcherDir, MOD_JAR);
-                    if (f.exists()) localMod = f;
+                    File f = new File(dir, MOD_JAR);
+                    if (f.exists()) local = f;
                 } catch (Exception ignored) {}
-
-                if (localMod != null) {
-                    status(statusTxt, "Установка мода...");
-                    pb.setProgress(0.25f);
-                    Files.copy(localMod.toPath(), modInClient.toPath(),
+                if (local != null) {
+                    Files.copy(local.toPath(), modFile.toPath(),
                         java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                 } else {
-                    // Скачиваем с сайта
-                    download(MOD_URL, modInClient, (pct) ->
+                    download(MOD_URL, modFile, pct ->
                         SwingUtilities.invokeLater(() -> {
                             statusTxt.setText("Скачиваем мод... " + pct + "%");
-                            pb.setProgress(0.15f + pct / 100f * 0.25f);
-                        })
-                    );
+                            pb.setProgress(0.05f + pct / 100f * 0.05f);
+                        }));
                 }
             }
 
-            // Копируем мод в .minecraft/mods для Fabric
-            new File(MODS_DIR).mkdirs();
-            // Удаляем старые версии
-            File[] oldMods = new File(MODS_DIR).listFiles(
-                (d, n) -> n.startsWith("TheDay-") && n.endsWith(".jar") && !n.equals(MOD_JAR));
-            if (oldMods != null) for (File f : oldMods) f.delete();
-            Files.copy(modInClient.toPath(), modInMC.toPath(),
-                java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            // ── Шаг 3: Fabric profile JSON ────────────────────────────────
+            status(statusTxt, "Получаем Fabric профиль...");
+            pb.setProgress(0.10f);
+            File fabricJsonFile = new File(CLIENT_VERSIONS, "fabric-" + MC_VERSION + ".json");
+            if (!fabricJsonFile.exists()) {
+                download(FABRIC_LOADER_URL, fabricJsonFile, null);
+            }
+            String fabricJson = new String(Files.readAllBytes(fabricJsonFile.toPath()));
 
-            // ── Шаг 3: Устанавливаем Fabric если нет ─────────────────────
-            pb.setProgress(0.45f);
-            File fabricProfile = new File(MC_DIR + "\\versions\\fabric-loader-" + FABRIC_VER + "-" + MC_VERSION);
-            if (!fabricProfile.exists()) {
-                status(statusTxt, "Скачиваем Fabric Installer...");
-                File fabricJar = new File(CLIENT_DIR, "fabric-installer.jar");
-                if (!fabricJar.exists()) {
-                    download(FABRIC_URL, fabricJar, (pct) ->
-                        SwingUtilities.invokeLater(() -> {
-                            statusTxt.setText("Скачиваем Fabric... " + pct + "%");
-                            pb.setProgress(0.45f + pct / 100f * 0.15f);
-                        })
-                    );
-                }
-                status(statusTxt, "Устанавливаем Fabric...");
-                pb.setProgress(0.62f);
-                Process fp = new ProcessBuilder(
-                    findJava(), "-jar", fabricJar.getAbsolutePath(),
-                    "client",
-                    "-mcversion", MC_VERSION,
-                    "-loader", FABRIC_VER,
-                    "-noprofile"
-                ).redirectErrorStream(true).start();
-                // Читаем вывод чтобы процесс не завис
-                new Thread(() -> {
-                    try (BufferedReader br = new BufferedReader(
-                            new InputStreamReader(fp.getInputStream()))) {
-                        String line;
-                        while ((line = br.readLine()) != null) {
-                            System.out.println("[Fabric] " + line);
-                        }
-                    } catch (Exception ignored) {}
-                }).start();
-                fp.waitFor();
+            // ── Шаг 4: Minecraft version JSON ─────────────────────────────
+            status(statusTxt, "Получаем версию Minecraft...");
+            pb.setProgress(0.13f);
+            File mcJsonFile = new File(CLIENT_VERSIONS, MC_VERSION + ".json");
+            if (!mcJsonFile.exists()) {
+                File manifest = new File(CLIENT_DIR, "version_manifest.json");
+                download(MC_MANIFEST_URL, manifest, null);
+                String mf = new String(Files.readAllBytes(manifest.toPath()));
+                String vUrl = extractVersionUrl(mf, MC_VERSION);
+                if (vUrl == null) throw new Exception("Версия " + MC_VERSION + " не найдена");
+                download(vUrl, mcJsonFile, null);
+            }
+            String mcJson = new String(Files.readAllBytes(mcJsonFile.toPath()));
+
+            // ── Шаг 5: Minecraft client.jar ───────────────────────────────
+            status(statusTxt, "Скачиваем Minecraft...");
+            pb.setProgress(0.15f);
+            File mcJar = new File(CLIENT_VERSIONS, MC_VERSION + ".jar");
+            if (!mcJar.exists()) {
+                String cUrl = extractClientUrl(mcJson);
+                if (cUrl == null) throw new Exception("Не найден client jar URL");
+                download(cUrl, mcJar, pct ->
+                    SwingUtilities.invokeLater(() -> {
+                        statusTxt.setText("Скачиваем Minecraft... " + pct + "%");
+                        pb.setProgress(0.15f + pct / 100f * 0.20f);
+                    }));
             }
 
-            // ── Шаг 4: Запускаем Minecraft с gameDir = C:\TheDay ─────────
-            status(statusTxt, "Запуск Minecraft...");
-            pb.setProgress(0.85f);
-            Thread.sleep(500);
+            // ── Шаг 6: Библиотеки ─────────────────────────────────────────
+            status(statusTxt, "Скачиваем библиотеки...");
+            pb.setProgress(0.35f);
+            List<String> classpath = new ArrayList<>();
+            classpath.add(mcJar.getAbsolutePath());
+            downloadLibraries(mcJson, CLIENT_LIBS, classpath,
+                (done, total) -> SwingUtilities.invokeLater(() -> {
+                    statusTxt.setText("Библиотеки: " + done + "/" + total);
+                    pb.setProgress(0.35f + (float) done / Math.max(total,1) * 0.15f);
+                }));
+            downloadLibraries(fabricJson, CLIENT_LIBS, classpath,
+                (done, total) -> SwingUtilities.invokeLater(() -> {
+                    statusTxt.setText("Fabric libs: " + done + "/" + total);
+                    pb.setProgress(0.50f + (float) done / Math.max(total,1) * 0.10f);
+                }));
+            // Добавляем мод в classpath
+            classpath.add(modFile.getAbsolutePath());
 
-            // Ищем установленный профиль Fabric
-            String profileId = "fabric-loader-" + FABRIC_VER + "-" + MC_VERSION;
-            File versionsDir = new File(MC_DIR + "\\versions");
-            if (versionsDir.exists()) {
-                File[] profiles = versionsDir.listFiles(f ->
-                    f.isDirectory()
-                    && f.getName().toLowerCase().contains("fabric")
-                    && f.getName().contains(MC_VERSION));
-                if (profiles != null && profiles.length > 0) {
-                    profileId = profiles[0].getName();
-                }
+            // ── Шаг 7: Assets ─────────────────────────────────────────────
+            status(statusTxt, "Скачиваем ресурсы...");
+            pb.setProgress(0.60f);
+            String assetIndex = extractAssetIndex(mcJson);
+            String assetIndexUrl = extractAssetIndexUrl(mcJson);
+            File assetIndexDir = new File(CLIENT_ASSETS, "indexes");
+            assetIndexDir.mkdirs();
+            File assetIndexFile = new File(assetIndexDir, assetIndex + ".json");
+            if (!assetIndexFile.exists() && assetIndexUrl != null) {
+                download(assetIndexUrl, assetIndexFile, null);
+            }
+            if (assetIndexFile.exists()) {
+                downloadAssets(assetIndexFile, CLIENT_ASSETS,
+                    (done, total) -> SwingUtilities.invokeLater(() -> {
+                        statusTxt.setText("Ресурсы: " + done + "/" + total);
+                        pb.setProgress(0.60f + (float) done / Math.max(total,1) * 0.25f);
+                    }));
             }
 
-            // Пробуем запустить Minecraft Launcher с gameDir
-            String[] mcExePaths = {
-                // Store / Xbox версия
-                "C:\\Program Files\\WindowsApps\\Microsoft.4297127D64EC6_2.5.2.0_x64__8wekyb3d8bbwe\\Minecraft.exe",
-                // Обычный установщик
-                System.getProperty("user.home") + "\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Minecraft Launcher\\Minecraft Launcher.exe",
-                "C:\\Program Files (x86)\\Minecraft Launcher\\MinecraftLauncher.exe",
-                "C:\\Program Files\\Minecraft Launcher\\MinecraftLauncher.exe",
-                "C:\\XboxGames\\Minecraft Launcher\\Content\\Minecraft.exe"
-            };
+            // ── Шаг 8: Запуск ─────────────────────────────────────────────
+            status(statusTxt, "Запуск...");
+            pb.setProgress(0.90f);
+            Thread.sleep(300);
 
-            boolean started = false;
-            for (String path : mcExePaths) {
-                File exe = new File(path);
-                if (exe.exists()) {
-                    new ProcessBuilder(exe.getAbsolutePath()).start();
-                    started = true;
-                    break;
-                }
-            }
+            String mainClass = extractMainClass(fabricJson);
+            if (mainClass == null) mainClass = "net.minecraft.client.main.Main";
+            String cp = String.join(File.pathSeparator, classpath);
 
-            if (!started) {
-                // Ищем любой Minecraft.exe в WindowsApps динамически
-                File windowsApps = new File("C:\\Program Files\\WindowsApps");
-                if (windowsApps.exists()) {
-                    File[] dirs = windowsApps.listFiles(f ->
-                        f.isDirectory() && f.getName().startsWith("Microsoft.4297127D64EC6"));
-                    if (dirs != null && dirs.length > 0) {
-                        File mc = new File(dirs[0], "Minecraft.exe");
-                        if (mc.exists()) {
-                            new ProcessBuilder(mc.getAbsolutePath()).start();
-                            started = true;
-                        }
-                    }
-                }
-            }
+            List<String> cmd = new ArrayList<>();
+            cmd.add(findJava());
+            cmd.add("-Xmx2G"); cmd.add("-Xms512M");
+            cmd.add("-XX:+UseG1GC");
+            cmd.add("-Djava.library.path=" + CLIENT_NATIVES);
+            cmd.add("-cp"); cmd.add(cp);
+            cmd.add(mainClass);
+            cmd.add("--gameDir");    cmd.add(CLIENT_DIR);
+            cmd.add("--assetsDir");  cmd.add(CLIENT_ASSETS);
+            cmd.add("--assetIndex"); cmd.add(assetIndex);
+            cmd.add("--version");    cmd.add("fabric-" + MC_VERSION);
+            cmd.add("--accessToken"); cmd.add("0");
+            cmd.add("--userType");   cmd.add("legacy");
+            cmd.add("--username");   cmd.add("Player");
 
-            if (!started) {
-                // Последний вариант — через explorer
-                new ProcessBuilder("explorer.exe",
-                    "shell:appsFolder\\Microsoft.4297127D64EC6_8wekyb3d8bbwe!Minecraft").start();
-            }
+            Process proc = new ProcessBuilder(cmd)
+                .directory(new File(CLIENT_DIR))
+                .redirectErrorStream(true)
+                .start();
+            new Thread(() -> {
+                try (BufferedReader br = new BufferedReader(
+                        new InputStreamReader(proc.getInputStream()))) {
+                    String line;
+                    while ((line = br.readLine()) != null)
+                        System.out.println("[MC] " + line);
+                } catch (Exception ignored) {}
+            }).start();
 
             pb.setProgress(1f);
-            Thread.sleep(1000);
+            Thread.sleep(1500);
             SwingUtilities.invokeLater(() -> System.exit(0));
 
         } catch (Exception ex) {
@@ -335,12 +337,173 @@ public class TheDayLauncher {
         }
     }
 
+    // ── Вспомогательные методы ────────────────────────────────────────────────
+    interface ProgressCallback2 { void update(int done, int total); }
+
+    static void downloadLibraries(String json, String libDir,
+            List<String> classpath, ProgressCallback2 cb) throws Exception {
+        int libStart = json.indexOf("\"libraries\"");
+        if (libStart < 0) return;
+        int arrStart = json.indexOf('[', libStart);
+        int arrEnd   = findArrayEnd(json, arrStart);
+        String libArr = json.substring(arrStart + 1, arrEnd);
+        List<String[]> libs = parseLibraries(libArr);
+        int total = libs.size(), done = 0;
+        for (String[] lib : libs) {
+            String url = lib[0], path = lib[1];
+            if (url == null || url.isEmpty()) { done++; continue; }
+            File dest = new File(libDir, path.replace('/', File.separatorChar));
+            dest.getParentFile().mkdirs();
+            if (!dest.exists()) {
+                try { download(url, dest, null); }
+                catch (Exception e) { System.out.println("[WARN] skip: " + url); }
+            }
+            if (dest.exists()) classpath.add(dest.getAbsolutePath());
+            done++;
+            if (cb != null) cb.update(done, total);
+        }
+    }
+
+    static List<String[]> parseLibraries(String arr) {
+        List<String[]> result = new ArrayList<>();
+        int i = 0;
+        while (i < arr.length()) {
+            int os = arr.indexOf('{', i);
+            if (os < 0) break;
+            int oe = findObjEnd(arr, os);
+            String obj = arr.substring(os, oe + 1);
+            if (!obj.contains("\"natives\"") && !obj.contains("\"rules\"")) {
+                String url  = extractDeep(obj, "url");
+                String path = extractDeep(obj, "path");
+                if (url != null && path != null) result.add(new String[]{url, path});
+            }
+            i = oe + 1;
+        }
+        return result;
+    }
+
+    static void downloadAssets(File indexFile, String assetsDir,
+            ProgressCallback2 cb) throws Exception {
+        String json = new String(Files.readAllBytes(indexFile.toPath()));
+        File objDir = new File(assetsDir, "objects");
+        objDir.mkdirs();
+        List<String> hashes = parseAssetHashes(json);
+        int total = hashes.size(), done = 0;
+        for (String hash : hashes) {
+            String prefix = hash.substring(0, 2);
+            File dest = new File(objDir, prefix + File.separator + hash);
+            dest.getParentFile().mkdirs();
+            if (!dest.exists()) {
+                try { download("https://resources.download.minecraft.net/" + prefix + "/" + hash, dest, null); }
+                catch (Exception ignored) {}
+            }
+            done++;
+            if (cb != null && done % 100 == 0) cb.update(done, total);
+        }
+        if (cb != null) cb.update(total, total);
+    }
+
+    static List<String> parseAssetHashes(String json) {
+        List<String> result = new ArrayList<>();
+        int i = 0;
+        while (true) {
+            int h = json.indexOf("\"hash\"", i);
+            if (h < 0) break;
+            int q1 = json.indexOf('"', h + 7);
+            int q2 = json.indexOf('"', q1 + 1);
+            if (q1 < 0 || q2 < 0) break;
+            result.add(json.substring(q1 + 1, q2));
+            i = q2 + 1;
+        }
+        return result;
+    }
+
+    static String extractVersionUrl(String json, String version) {
+        String search = "\"id\":\"" + version + "\"";
+        int idx = json.indexOf(search);
+        if (idx < 0) return null;
+        int urlIdx = json.indexOf("\"url\"", idx);
+        if (urlIdx < 0) return null;
+        int q1 = json.indexOf('"', urlIdx + 6);
+        int q2 = json.indexOf('"', q1 + 1);
+        return json.substring(q1 + 1, q2);
+    }
+
+    static String extractClientUrl(String json) {
+        int idx = json.indexOf("\"client\"");
+        if (idx < 0) return null;
+        int urlIdx = json.indexOf("\"url\"", idx);
+        if (urlIdx < 0) return null;
+        int q1 = json.indexOf('"', urlIdx + 6);
+        int q2 = json.indexOf('"', q1 + 1);
+        return json.substring(q1 + 1, q2);
+    }
+
+    static String extractMainClass(String json) {
+        String key = "\"mainClass\"";
+        int idx = json.indexOf(key);
+        if (idx < 0) return null;
+        int q1 = json.indexOf('"', idx + key.length() + 1);
+        int q2 = json.indexOf('"', q1 + 1);
+        return json.substring(q1 + 1, q2);
+    }
+
+    static String extractAssetIndex(String json) {
+        int idx = json.indexOf("\"assetIndex\"");
+        if (idx < 0) return "1.21";
+        int idIdx = json.indexOf("\"id\"", idx);
+        if (idIdx < 0) return "1.21";
+        int q1 = json.indexOf('"', idIdx + 5);
+        int q2 = json.indexOf('"', q1 + 1);
+        return json.substring(q1 + 1, q2);
+    }
+
+    static String extractAssetIndexUrl(String json) {
+        int idx = json.indexOf("\"assetIndex\"");
+        if (idx < 0) return null;
+        int urlIdx = json.indexOf("\"url\"", idx);
+        if (urlIdx < 0) return null;
+        int q1 = json.indexOf('"', urlIdx + 6);
+        int q2 = json.indexOf('"', q1 + 1);
+        return json.substring(q1 + 1, q2);
+    }
+
+    static String extractDeep(String json, String key) {
+        String search = "\"" + key + "\"";
+        int idx = json.indexOf(search);
+        if (idx < 0) return null;
+        int colon = json.indexOf(':', idx + search.length());
+        if (colon < 0) return null;
+        int q1 = json.indexOf('"', colon + 1);
+        if (q1 < 0) return null;
+        int q2 = json.indexOf('"', q1 + 1);
+        if (q2 < 0) return null;
+        return json.substring(q1 + 1, q2);
+    }
+
+    static int findArrayEnd(String s, int start) {
+        int depth = 0;
+        for (int i = start; i < s.length(); i++) {
+            if (s.charAt(i) == '[') depth++;
+            else if (s.charAt(i) == ']') { depth--; if (depth == 0) return i; }
+        }
+        return s.length() - 1;
+    }
+
+    static int findObjEnd(String s, int start) {
+        int depth = 0;
+        for (int i = start; i < s.length(); i++) {
+            if (s.charAt(i) == '{') depth++;
+            else if (s.charAt(i) == '}') { depth--; if (depth == 0) return i; }
+        }
+        return s.length() - 1;
+    }
+
     static void status(JLabel lbl, String txt) {
         SwingUtilities.invokeLater(() -> lbl.setText(txt));
     }
 
     static String findJava() {
-        // Ищем java.exe рядом с текущим процессом
         String javaHome = System.getProperty("java.home");
         if (javaHome != null) {
             File java = new File(javaHome, "bin\\java.exe");
@@ -356,7 +519,6 @@ public class TheDayLauncher {
         con.setConnectTimeout(15000);
         con.setReadTimeout(120000);
         con.setRequestProperty("User-Agent", "TheDay-Launcher/1.2");
-        // Следуем редиректам
         con.setInstanceFollowRedirects(true);
         int total = con.getContentLength();
         try (InputStream in = con.getInputStream();
