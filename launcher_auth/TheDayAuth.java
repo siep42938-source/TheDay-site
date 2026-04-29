@@ -209,6 +209,11 @@ public class TheDayAuth {
     // ── Загрузить сохранённый токен ────────────────────────
     /** Загружает сохранённый JWT токен из ~/.theday/session.dat */
     public static String loadToken() {
+        // Сначала проверяем токен переданный лаунчером через JVM свойство
+        String launcherToken = System.getProperty("theday.token");
+        if (launcherToken != null && !launcherToken.isEmpty()) {
+            return launcherToken;
+        }
         try {
             java.nio.file.Path file = java.nio.file.Paths.get(
                 System.getProperty("user.home"), ".theday", "session.dat"
