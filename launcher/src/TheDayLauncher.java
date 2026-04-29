@@ -18,8 +18,8 @@ public class TheDayLauncher {
     // ── Константы ─────────────────────────────────────────────────────────────
     static final String MOD_JAR    = "TheDay-1.0.01.jar";
     static final String MOD_URL    = "https://theday-site.pages.dev/TheDay-1.0.01.jar";
-    static final String MC_VERSION = "1.21.1";
-    static final String FABRIC_VER = "0.16.9";
+    static final String MC_VERSION = "1.21.11";
+    static final String FABRIC_VER = "0.18.4";
 
     // Папка клиента на диске C
     static final String CLIENT_DIR         = "C:\\TheDay";
@@ -216,6 +216,10 @@ public class TheDayLauncher {
             status(statusTxt, "Получаем Fabric профиль...");
             pb.setProgress(0.10f);
             File fabricJsonFile = new File(CLIENT_VERSIONS, "fabric-" + MC_VERSION + ".json");
+            // Удаляем старые JSON от других версий
+            File[] oldJsons = new File(CLIENT_VERSIONS).listFiles(
+                (d, n) -> n.endsWith(".json") && !n.equals("fabric-" + MC_VERSION + ".json") && !n.equals(MC_VERSION + ".json"));
+            if (oldJsons != null) for (File f : oldJsons) f.delete();
             if (!fabricJsonFile.exists()) {
                 download(FABRIC_LOADER_URL, fabricJsonFile, null);
             }
