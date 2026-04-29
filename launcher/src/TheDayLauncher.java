@@ -18,7 +18,7 @@ public class TheDayLauncher {
     // ── Константы ─────────────────────────────────────────────────────────────
     static final String MOD_JAR    = "TheDay-1.0.01.jar";
     static final String MOD_URL    = "https://theday-site.pages.dev/TheDay-1.0.01.jar";
-    static final String MC_VERSION = "1.21.1";
+    static final String MC_VERSION = "1.21.11";
     static final String FABRIC_VER = "0.18.4";
 
     // Папка клиента на диске C
@@ -28,17 +28,8 @@ public class TheDayLauncher {
     static final String CLIENT_LOGS        = CLIENT_DIR + "\\logs";
     static final String CLIENT_SAVES       = CLIENT_DIR + "\\saves";
     static final String CLIENT_SCREENSHOTS = CLIENT_DIR + "\\screenshots";
-    static final String CLIENT_LIBS        = CLIENT_DIR + "\\libraries";
-    static final String CLIENT_VERSIONS    = CLIENT_DIR + "\\versions";
-    static final String CLIENT_ASSETS      = CLIENT_DIR + "\\assets";
     static final String CLIENT_NATIVES     = CLIENT_DIR + "\\natives";
-
-    // Mojang API
-    static final String MC_MANIFEST_URL =
-        "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
-    // Fabric meta
-    static final String FABRIC_LOADER_URL =
-        "https://meta.fabricmc.net/v2/versions/loader/" + MC_VERSION + "/" + FABRIC_VER + "/profile/json";
+    static final String CLIENT_ASSETS      = CLIENT_DIR + "\\assets";
 
     // Цвета
     static final Color WHITE  = Color.WHITE;
@@ -54,6 +45,19 @@ public class TheDayLauncher {
     static float  fadeIn  = 0f;
     static long   fadeStart = 0L;
 
+    // ── Данные авторизации ────────────────────────────────────────────────────
+    static String savedToken   = null;
+    static String savedUser    = null;
+    static String savedRole    = null;
+    static String savedSub     = null;
+    static String savedUid     = null;
+    static String savedAvatar  = null;
+    static java.awt.image.BufferedImage avatarImg = null;
+
+    static final String API_URL      = "https://the-day-site-ovk7.vercel.app/api";
+    static final String LAUNCHER_KEY = "launcher_theday_2026";
+    static final String TOKEN_FILE   = System.getProperty("user.home") + "\\.theday\\session.dat";
+
     // ── main ──────────────────────────────────────────────────────────────────
     public static void main(String[] args) {
         System.setProperty("awt.useSystemAAFontSettings", "on");
@@ -65,10 +69,238 @@ public class TheDayLauncher {
             frame.setBackground(new Color(0, 0, 0, 0));
             frame.getRootPane().setOpaque(false);
             frame.setResizable(false);
-            showMain();
-            frame.setVisible(true);
+            // Проверяем сохранённый токен
+            String token = loadToken();
+            if (token != null) {
+                showMain(); // покажем UI, потом проверим токен в фоне
+                frame.setVisible(true);
+                new Thread(() -> {
+                    AuthResult r = apiVerify(token);
+                    if (r != null && r.ok) {
+                        savedToken = token;
+                        savedUser  = r.username;
+                        savedRole  = r.role;
+                        savedSub   = r.sub;
+                        savedUid   = r.uid;
+                        savedAvatar = r.avatar;
+                        loadAvatarImg();
+                        SwingUtilities.invokeLater(() -> showMain());
+                    } else {
+                        clearToken();
+                        SwingUtilities.invokeLater(() -> showLogin());
+                    }
+                }).start();
+            } else {
+                showLogin();
+                frame.setVisible(true);
+            }
             try { frame.setShape(new RoundRectangle2D.Double(0,0,frame.getWidth(),frame.getHeight(),24,24)); } catch(Exception ignored){}
         });
+    }
+
+    // ── Экран входа ───────────────────────────────────────────────────────────
+    static void showLogin() {
+        frame.setSize(420, 340);
+        frame.setLocationRelativeTo(null);
+        JPanel p = makeBase(420, 340);
+        int W = 420, H = 340;
+
+        // X кнопка
+        JLabel x = new JLabel("\u00d7");
+        x.setForeground(new Color(100,120,140)); x.setFont(new Font("Segoe UI",Font.PLAIN,20));
+        x.setBounds(W-36,10,26,26); x.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        x.addMouseListener(new MouseAdapter(){
+            public void mouseClicked(MouseEvent e){System.exit(0);}
+            public void mouseEntered(MouseEvent e){x.setForeground(new Color(226,232,240));}
+            public void mouseExited(MouseEvent e){x.setForeground(new Color(100,120,140));}
+        }); p.add(x);
+
+        // Заголовок
+        JLabel title = new JLabel("TheDay Client");
+        title.setForeground(new Color(226,232,240));
+        title.setFont(new Font("Segoe UI",Font.BOLD,16));
+        title.setBounds(W/2-80,28,160,22); p.add(title);
+
+        JLabel sub = new JLabel("Войдите в аккаунт");
+        sub.setForeground(new Color(100,116,139));
+        sub.setFont(new Font("Segoe UI",Font.PLAIN,11));
+        sub.setBounds(W/2-70,52,140,16); p.add(sub);
+
+        // Поля
+        TDField emailF = new TDField("Email или никнейм", false);
+        emailF.setBounds(W/2-130,88,260,44); p.add(emailF);
+
+        TDField passF = new TDField("Пароль", true);
+        passF.setBounds(W/2-130,140,260,44); p.add(passF);
+
+        // Статус
+        JLabel statusLbl = new JLabel("");
+        statusLbl.setForeground(new Color(255,80,80));
+        statusLbl.setFont(new Font("Segoe UI",Font.PLAIN,10));
+        statusLbl.setHorizontalAlignment(SwingConstants.CENTER);
+        statusLbl.setBounds(W/2-130,192,260,16); p.add(statusLbl);
+
+        // Кнопка
+        TDBtn btn = new TDBtn("Войти", new Color(135,206,235), new Color(79,195,247));
+        btn.setBounds(W/2-130,214,260,40); p.add(btn);
+
+        // Ссылка на сайт
+        JLabel siteLink = new JLabel("Нет аккаунта? Зарегистрируйтесь на сайте");
+        siteLink.setForeground(new Color(79,195,247));
+        siteLink.setFont(new Font("Segoe UI",Font.PLAIN,10));
+        siteLink.setHorizontalAlignment(SwingConstants.CENTER);
+        siteLink.setBounds(W/2-150,264,300,16);
+        siteLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        siteLink.addMouseListener(new MouseAdapter(){
+            public void mouseClicked(MouseEvent e){ openBrowser("https://the-day-site-ovk7.vercel.app/register.html"); }
+        }); p.add(siteLink);
+
+        btn.addActionListener(e -> {
+            String email = emailF.val();
+            String pass  = passF.val();
+            if (email.isEmpty() || pass.isEmpty()) {
+                statusLbl.setText("Заполните все поля");
+                return;
+            }
+            btn.setEnabled(false);
+            statusLbl.setForeground(new Color(135,206,235));
+            statusLbl.setText("Подключение...");
+            new Thread(() -> {
+                AuthResult r = apiLogin(email, pass);
+                SwingUtilities.invokeLater(() -> {
+                    if (r != null && r.ok) {
+                        savedToken  = r.token;
+                        savedUser   = r.username;
+                        savedRole   = r.role;
+                        savedSub    = r.sub;
+                        savedUid    = r.uid;
+                        savedAvatar = r.avatar;
+                        saveToken(r.token);
+                        loadAvatarImg();
+                        showMain();
+                    } else {
+                        btn.setEnabled(true);
+                        statusLbl.setForeground(new Color(255,80,80));
+                        statusLbl.setText(r != null ? r.error : "Ошибка соединения");
+                    }
+                });
+            }).start();
+        });
+
+        frame.setContentPane(p); frame.revalidate(); frame.repaint();
+        SwingUtilities.invokeLater(() -> {
+            try { frame.setShape(new RoundRectangle2D.Double(0,0,frame.getWidth(),frame.getHeight(),24,24)); } catch(Exception ignored){}
+        });
+    }
+
+    // ── API методы ────────────────────────────────────────────────────────────
+    static class AuthResult {
+        boolean ok; String token, username, role, sub, uid, avatar, error;
+    }
+
+    static AuthResult apiLogin(String email, String pass) {
+        try {
+            String body = "{\"email\":\"" + esc(email) + "\",\"password\":\"" + esc(pass) + "\",\"hwid\":\"" + esc(getHWID()) + "\"}";
+            return apiPost("/launcher/login", body);
+        } catch (Exception e) { AuthResult r = new AuthResult(); r.error = e.getMessage(); return r; }
+    }
+
+    static AuthResult apiVerify(String token) {
+        try {
+            String body = "{\"token\":\"" + esc(token) + "\",\"hwid\":\"" + esc(getHWID()) + "\"}";
+            return apiPost("/launcher/verify", body);
+        } catch (Exception e) { return null; }
+    }
+
+    static AuthResult apiProfile(String token) {
+        try {
+            String body = "{\"token\":\"" + esc(token) + "\"}";
+            return apiPost("/launcher/profile", body);
+        } catch (Exception e) { return null; }
+    }
+
+    static AuthResult apiPost(String path, String body) throws Exception {
+        URL url = new URL(API_URL + path);
+        HttpURLConnection con = (HttpURLConnection) url.openConnection();
+        con.setRequestMethod("POST");
+        con.setRequestProperty("Content-Type","application/json");
+        con.setRequestProperty("x-launcher-secret", LAUNCHER_KEY);
+        con.setConnectTimeout(10000); con.setReadTimeout(10000);
+        con.setDoOutput(true);
+        try (OutputStream os = con.getOutputStream()) { os.write(body.getBytes("UTF-8")); }
+        int code = con.getResponseCode();
+        InputStream is = code < 400 ? con.getInputStream() : con.getErrorStream();
+        String json = new String(is.readAllBytes(), "UTF-8");
+        AuthResult r = new AuthResult();
+        r.ok       = json.contains("\"ok\":true");
+        r.token    = jsonStr(json, "token");
+        r.username = jsonStr(json, "username");
+        r.role     = jsonStr(json, "role");
+        r.sub      = jsonStr(json, "sub");
+        r.uid      = jsonStr(json, "id");
+        r.avatar   = jsonStr(json, "avatar");
+        r.error    = jsonStr(json, "error");
+        // Ищем внутри user{}
+        if (r.username == null) { String u = jsonBlock(json,"user"); if(u!=null){ r.username=jsonStr(u,"username"); r.role=jsonStr(u,"role"); r.sub=jsonStr(u,"sub"); r.uid=jsonStr(u,"id"); r.avatar=jsonStr(u,"avatar"); } }
+        return r;
+    }
+
+    static String jsonStr(String json, String key) {
+        String s = "\"" + key + "\":\"";
+        int i = json.indexOf(s); if (i<0) return null;
+        i += s.length();
+        StringBuilder sb = new StringBuilder();
+        while (i < json.length()) {
+            char c = json.charAt(i);
+            if (c=='\\' && i+1<json.length()) { char n=json.charAt(i+1); if(n=='"'){sb.append('"');i+=2;continue;} if(n=='\\'){sb.append('\\');i+=2;continue;} }
+            if (c=='"') break;
+            sb.append(c); i++;
+        }
+        return sb.toString();
+    }
+
+    static String jsonBlock(String json, String key) {
+        String s = "\"" + key + "\":{"; int i = json.indexOf(s); if(i<0) return null;
+        i += s.length()-1; int d=0; StringBuilder sb=new StringBuilder();
+        for(;i<json.length();i++){char c=json.charAt(i);if(c=='{')d++;else if(c=='}'){d--;if(d==0){sb.append(c);break;}}sb.append(c);}
+        return sb.toString();
+    }
+
+    static String esc(String s) { return s==null?"":s.replace("\\","\\\\").replace("\"","\\\""); }
+
+    static String getHWID() {
+        try {
+            Process p = Runtime.getRuntime().exec(new String[]{"wmic","csproduct","get","UUID"});
+            String out = new String(p.getInputStream().readAllBytes()).trim();
+            for (String line : out.split("\\r?\\n")) {
+                line = line.trim();
+                if (!line.isEmpty() && !line.equalsIgnoreCase("UUID")) return "WIN-" + line.replaceAll("[^A-Za-z0-9-]","");
+            }
+        } catch (Exception ignored) {}
+        return "PC-" + System.getProperty("user.name","user");
+    }
+
+    static void saveToken(String token) {
+        try { File f = new File(TOKEN_FILE); f.getParentFile().mkdirs(); Files.writeString(f.toPath(), token); } catch (Exception ignored) {}
+    }
+
+    static String loadToken() {
+        try { File f = new File(TOKEN_FILE); if(f.exists()) return Files.readString(f.toPath()).trim(); } catch (Exception ignored) {}
+        return null;
+    }
+
+    static void clearToken() {
+        try { new File(TOKEN_FILE).delete(); } catch (Exception ignored) {}
+    }
+
+    static void loadAvatarImg() {
+        if (savedAvatar == null || savedAvatar.isEmpty()) return;
+        try {
+            String b64 = savedAvatar;
+            int c = b64.indexOf(','); if(c>=0) b64=b64.substring(c+1);
+            byte[] bytes = Base64.getDecoder().decode(b64);
+            avatarImg = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(bytes));
+        } catch (Exception ignored) {}
     }
 
     // ── Главный экран ─────────────────────────────────────────────────────────
@@ -94,7 +326,7 @@ public class TheDayLauncher {
         title.setFont(new Font("Segoe UI",Font.BOLD,15));
         title.setBounds(lx,13,200,20); p.add(title);
 
-        JLabel ver = new JLabel("1.21.1");
+        JLabel ver = new JLabel("1.21.11");
         ver.setForeground(new Color(135,206,235,180));
         ver.setFont(new Font("Segoe UI",Font.PLAIN,11));
         ver.setBounds(lx+130,15,60,16); p.add(ver);
@@ -147,6 +379,43 @@ public class TheDayLauncher {
         statusTxt.setFont(new Font("Segoe UI",Font.PLAIN,11));
         statusTxt.setBounds(lx+16,226,280,18); p.add(statusTxt);
 
+        // ── Блок профиля ──────────────────────────────────────────────────────
+        TDAvatar ava = new TDAvatar(savedAvatar, 36);
+        ava.setBounds(lx, 268, 36, 36); p.add(ava);
+
+        String dispName = savedUser != null ? savedUser : "Гость";
+        JLabel nickLbl = new JLabel(dispName);
+        nickLbl.setForeground(new Color(226,232,240));
+        nickLbl.setFont(new Font("Segoe UI",Font.BOLD,12));
+        nickLbl.setBounds(lx+44, 268, 200, 16); p.add(nickLbl);
+
+        String dispRole = savedRole != null ? savedRole : "";
+        JLabel roleLbl = new JLabel(dispRole);
+        roleLbl.setForeground(new Color(135,206,235));
+        roleLbl.setFont(new Font("Segoe UI",Font.PLAIN,10));
+        roleLbl.setBounds(lx+44, 284, 200, 14); p.add(roleLbl);
+
+        String dispSub = savedSub != null && !savedSub.isEmpty() ? "Подписка: " + savedSub : "Нет подписки";
+        JLabel subLbl = new JLabel(dispSub);
+        subLbl.setForeground(savedSub != null && !savedSub.isEmpty() ? new Color(100,220,130) : new Color(255,100,100));
+        subLbl.setFont(new Font("Segoe UI",Font.PLAIN,10));
+        subLbl.setBounds(lx+44, 298, 200, 14); p.add(subLbl);
+
+        JLabel logoutBtn = new JLabel("Выйти");
+        logoutBtn.setForeground(new Color(100,116,139));
+        logoutBtn.setFont(new Font("Segoe UI",Font.PLAIN,10));
+        logoutBtn.setBounds(lx, 320, 50, 14);
+        logoutBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        logoutBtn.addMouseListener(new MouseAdapter(){
+            public void mouseClicked(MouseEvent e){
+                clearToken();
+                savedToken=null; savedUser=null; savedRole=null; savedSub=null; savedUid=null; savedAvatar=null; avatarImg=null;
+                showLogin();
+            }
+            public void mouseEntered(MouseEvent e){ logoutBtn.setForeground(new Color(255,80,80)); }
+            public void mouseExited(MouseEvent e){ logoutBtn.setForeground(new Color(100,116,139)); }
+        }); p.add(logoutBtn);
+
         // Превью справа
         PreviewPanel preview = new PreviewPanel();
         preview.setBounds(385,0,395,440); p.add(preview);
@@ -163,22 +432,75 @@ public class TheDayLauncher {
         });
     }
 
+    // ── Пути к gradle кэшу ────────────────────────────────────────────────────
+    static String getGradleHome() {
+        // Пробуем текущего пользователя
+        String userHome = System.getProperty("user.home");
+        return userHome + "\\.gradle";
+    }
+
+    static String findFabricLoaderJar() {
+        String base = getGradleHome() + "\\caches\\modules-2\\files-2.1\\net.fabricmc\\fabric-loader\\" + FABRIC_VER;
+        File dir = new File(base);
+        if (dir.exists()) {
+            File[] subs = dir.listFiles();
+            if (subs != null) for (File sub : subs) {
+                File[] jars = sub.listFiles((d, n) -> n.equals("fabric-loader-" + FABRIC_VER + ".jar"));
+                if (jars != null && jars.length > 0) return jars[0].getAbsolutePath();
+            }
+        }
+        return null;
+    }
+
+    static String findMinecraftClientJar() {
+        String path = getGradleHome() + "\\caches\\fabric-loom\\" + MC_VERSION + "\\minecraft-client.jar";
+        if (new File(path).exists()) return path;
+        return null;
+    }
+
+    static String findAssetsDir() {
+        String path = getGradleHome() + "\\caches\\fabric-loom\\assets";
+        if (new File(path).exists()) return path;
+        return null;
+    }
+
+    static List<String> collectGradleLibraries() {
+        List<String> libs = new ArrayList<>();
+        String base = getGradleHome() + "\\caches\\modules-2\\files-2.1";
+        File baseDir = new File(base);
+        if (!baseDir.exists()) return libs;
+        collectJars(baseDir, libs);
+        return libs;
+    }
+
+    static void collectJars(File dir, List<String> result) {
+        File[] files = dir.listFiles();
+        if (files == null) return;
+        for (File f : files) {
+            if (f.isDirectory()) collectJars(f, result);
+            else if (f.getName().endsWith(".jar")
+                    && !f.getName().contains("sources")
+                    && !f.getName().contains("javadoc")
+                    && !f.getName().contains("natives")) {
+                result.add(f.getAbsolutePath());
+            }
+        }
+    }
+
     // ── Запуск клиента ────────────────────────────────────────────────────────
     static void launchClient(TDProgress pb, JLabel statusTxt, TDBtn launch) {
         try {
             // ── Шаг 1: Создаём C:\TheDay\ ─────────────────────────────────
             status(statusTxt, "Создание папки клиента...");
-            pb.setProgress(0.02f);
+            pb.setProgress(0.05f);
             for (String d : new String[]{
                 CLIENT_DIR, CLIENT_MODS, CLIENT_CONFIGS, CLIENT_LOGS,
-                CLIENT_SAVES, CLIENT_SCREENSHOTS, CLIENT_LIBS,
-                CLIENT_VERSIONS, CLIENT_ASSETS, CLIENT_NATIVES
+                CLIENT_SAVES, CLIENT_SCREENSHOTS
             }) new File(d).mkdirs();
 
             File opts = new File(CLIENT_DIR, "options.txt");
             if (!opts.exists()) {
                 try (PrintWriter pw = new PrintWriter(opts)) {
-                    pw.println("version:3953");
                     pw.println("autoJump:false");
                     pw.println("fov:0.0");
                     pw.println("renderDistance:12");
@@ -190,9 +512,10 @@ public class TheDayLauncher {
 
             // ── Шаг 2: Мод ────────────────────────────────────────────────
             status(statusTxt, "Проверка мода...");
-            pb.setProgress(0.05f);
+            pb.setProgress(0.15f);
             File modFile = new File(CLIENT_MODS, MOD_JAR);
             if (!modFile.exists()) {
+                // Сначала ищем рядом с лаунчером
                 File local = null;
                 try {
                     File dir = new File(TheDayLauncher.class
@@ -207,112 +530,109 @@ public class TheDayLauncher {
                     download(MOD_URL, modFile, pct ->
                         SwingUtilities.invokeLater(() -> {
                             statusTxt.setText("Скачиваем мод... " + pct + "%");
-                            pb.setProgress(0.05f + pct / 100f * 0.05f);
+                            pb.setProgress(0.15f + pct / 100f * 0.10f);
                         }));
                 }
             }
 
-            // ── Шаг 3: Fabric profile JSON ────────────────────────────────
-            status(statusTxt, "Получаем Fabric профиль...");
-            pb.setProgress(0.10f);
-            File fabricJsonFile = new File(CLIENT_VERSIONS, "fabric-" + MC_VERSION + ".json");
-            // Удаляем старые JSON от других версий
-            File[] oldJsons = new File(CLIENT_VERSIONS).listFiles(
-                (d, n) -> n.endsWith(".json") && !n.equals("fabric-" + MC_VERSION + ".json") && !n.equals(MC_VERSION + ".json"));
-            if (oldJsons != null) for (File f : oldJsons) f.delete();
-            if (!fabricJsonFile.exists()) {
-                download(FABRIC_LOADER_URL, fabricJsonFile, null);
-            }
-            String fabricJson = new String(Files.readAllBytes(fabricJsonFile.toPath()));
+            // ── Шаг 3: Ищем Minecraft client.jar в gradle кэше ───────────
+            status(statusTxt, "Поиск Minecraft " + MC_VERSION + "...");
+            pb.setProgress(0.30f);
+            String mcJarPath = findMinecraftClientJar();
+            if (mcJarPath == null)
+                throw new Exception("Minecraft " + MC_VERSION + " не найден в gradle кэше.\nЗапусти проект через IntelliJ/Gradle хотя бы раз.");
 
-            // ── Шаг 4: Minecraft version JSON ─────────────────────────────
-            status(statusTxt, "Получаем версию Minecraft...");
-            pb.setProgress(0.13f);
-            File mcJsonFile = new File(CLIENT_VERSIONS, MC_VERSION + ".json");
-            if (!mcJsonFile.exists()) {
-                File manifest = new File(CLIENT_DIR, "version_manifest.json");
-                download(MC_MANIFEST_URL, manifest, null);
-                String mf = new String(Files.readAllBytes(manifest.toPath()));
-                String vUrl = extractVersionUrl(mf, MC_VERSION);
-                if (vUrl == null) throw new Exception("Версия " + MC_VERSION + " не найдена");
-                download(vUrl, mcJsonFile, null);
-            }
-            String mcJson = new String(Files.readAllBytes(mcJsonFile.toPath()));
+            // ── Шаг 4: Ищем fabric-loader ─────────────────────────────────
+            status(statusTxt, "Поиск Fabric Loader...");
+            pb.setProgress(0.40f);
+            String fabricLoaderPath = findFabricLoaderJar();
+            if (fabricLoaderPath == null)
+                throw new Exception("fabric-loader-" + FABRIC_VER + ".jar не найден в gradle кэше.");
 
-            // ── Шаг 5: Minecraft client.jar ───────────────────────────────
-            status(statusTxt, "Скачиваем Minecraft...");
-            pb.setProgress(0.15f);
-            File mcJar = new File(CLIENT_VERSIONS, MC_VERSION + ".jar");
-            if (!mcJar.exists()) {
-                String cUrl = extractClientUrl(mcJson);
-                if (cUrl == null) throw new Exception("Не найден client jar URL");
-                download(cUrl, mcJar, pct ->
-                    SwingUtilities.invokeLater(() -> {
-                        statusTxt.setText("Скачиваем Minecraft... " + pct + "%");
-                        pb.setProgress(0.15f + pct / 100f * 0.20f);
-                    }));
-            }
-
-            // ── Шаг 6: Библиотеки ─────────────────────────────────────────
-            status(statusTxt, "Скачиваем библиотеки...");
-            pb.setProgress(0.35f);
+            // ── Шаг 5: Собираем classpath из gradle кэша ──────────────────
+            status(statusTxt, "Сборка classpath...");
+            pb.setProgress(0.55f);
             List<String> classpath = new ArrayList<>();
-            classpath.add(mcJar.getAbsolutePath());
-            downloadLibraries(mcJson, CLIENT_LIBS, classpath,
-                (done, total) -> SwingUtilities.invokeLater(() -> {
-                    statusTxt.setText("Библиотеки: " + done + "/" + total);
-                    pb.setProgress(0.35f + (float) done / Math.max(total,1) * 0.15f);
-                }));
-            downloadLibraries(fabricJson, CLIENT_LIBS, classpath,
-                (done, total) -> SwingUtilities.invokeLater(() -> {
-                    statusTxt.setText("Fabric libs: " + done + "/" + total);
-                    pb.setProgress(0.50f + (float) done / Math.max(total,1) * 0.10f);
-                }));
-            // Добавляем мод в classpath
+            classpath.add(mcJarPath);
+            classpath.add(fabricLoaderPath);
             classpath.add(modFile.getAbsolutePath());
 
-            // ── Шаг 7: Assets ─────────────────────────────────────────────
-            status(statusTxt, "Скачиваем ресурсы...");
-            pb.setProgress(0.60f);
-            String assetIndex = extractAssetIndex(mcJson);
-            String assetIndexUrl = extractAssetIndexUrl(mcJson);
-            File assetIndexDir = new File(CLIENT_ASSETS, "indexes");
-            assetIndexDir.mkdirs();
-            File assetIndexFile = new File(assetIndexDir, assetIndex + ".json");
-            if (!assetIndexFile.exists() && assetIndexUrl != null) {
-                download(assetIndexUrl, assetIndexFile, null);
+            // Добавляем все библиотеки из gradle кэша
+            List<String> gradleLibs = collectGradleLibraries();
+            // Исключаем дубли fabric-loader и minecraft
+            for (String lib : gradleLibs) {
+                if (!lib.equals(mcJarPath) && !lib.equals(fabricLoaderPath)
+                        && !lib.equals(modFile.getAbsolutePath())) {
+                    classpath.add(lib);
+                }
             }
-            if (assetIndexFile.exists()) {
-                downloadAssets(assetIndexFile, CLIENT_ASSETS,
-                    (done, total) -> SwingUtilities.invokeLater(() -> {
-                        statusTxt.setText("Ресурсы: " + done + "/" + total);
-                        pb.setProgress(0.60f + (float) done / Math.max(total,1) * 0.25f);
-                    }));
+
+            // ── Шаг 6: Assets ─────────────────────────────────────────────
+            status(statusTxt, "Проверка ресурсов...");
+            pb.setProgress(0.70f);
+            String assetsDir = findAssetsDir();
+            String assetIndex = "29"; // для 1.21.11
+            if (assetsDir == null) {
+                // Скачиваем assets index
+                assetsDir = CLIENT_ASSETS;
+                new File(assetsDir, "indexes").mkdirs();
+                File assetIndexFile = new File(assetsDir + "\\indexes", assetIndex + ".json");
+                if (!assetIndexFile.exists()) {
+                    download("https://piston-meta.mojang.com/v1/packages/2de8ae2f8fc27a8b024487da3311a6898cc3d1f2/29.json",
+                        assetIndexFile, null);
+                }
+                if (assetIndexFile.exists()) {
+                    downloadAssets(assetIndexFile, assetsDir,
+                        (done, total) -> SwingUtilities.invokeLater(() -> {
+                            statusTxt.setText("Ресурсы: " + done + "/" + total);
+                            pb.setProgress(0.70f + (float) done / Math.max(total,1) * 0.15f);
+                        }));
+                }
             }
+
+            // ── Шаг 7: Natives ────────────────────────────────────────────
+            status(statusTxt, "Проверка natives...");
+            pb.setProgress(0.87f);
+            // Используем natives из Rich-Modern если есть, иначе из win32-x86-64
+            String nativesDir = CLIENT_NATIVES;
+            new File(nativesDir).mkdirs();
+            // Копируем discord-rpc.dll если есть рядом с лаунчером
+            try {
+                File launcherDir = new File(TheDayLauncher.class
+                    .getProtectionDomain().getCodeSource().getLocation().toURI()).getParentFile();
+                File dll = new File(launcherDir, "win32-x86-64\\discord-rpc.dll");
+                if (dll.exists()) {
+                    Files.copy(dll.toPath(), new File(nativesDir, "discord-rpc.dll").toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                }
+            } catch (Exception ignored) {}
 
             // ── Шаг 8: Запуск ─────────────────────────────────────────────
             status(statusTxt, "Запуск...");
-            pb.setProgress(0.90f);
+            pb.setProgress(0.92f);
             Thread.sleep(300);
 
-            String mainClass = extractMainClass(fabricJson);
-            if (mainClass == null) mainClass = "net.minecraft.client.main.Main";
             String cp = String.join(File.pathSeparator, classpath);
 
             List<String> cmd = new ArrayList<>();
             cmd.add(findJava());
             cmd.add("-Xmx2G"); cmd.add("-Xms512M");
             cmd.add("-XX:+UseG1GC");
-            cmd.add("-Djava.library.path=" + CLIENT_NATIVES);
+            cmd.add("-Djava.library.path=" + nativesDir);
+            cmd.add("-Dfabric.skipMcProvider=true");
             cmd.add("-cp"); cmd.add(cp);
-            cmd.add(mainClass);
+            cmd.add("net.fabricmc.loader.impl.launch.knot.KnotClient");
             cmd.add("--gameDir");    cmd.add(CLIENT_DIR);
-            cmd.add("--assetsDir");  cmd.add(CLIENT_ASSETS);
+            cmd.add("--assetsDir");  cmd.add(assetsDir);
             cmd.add("--assetIndex"); cmd.add(assetIndex);
-            cmd.add("--version");    cmd.add("fabric-" + MC_VERSION);
-            cmd.add("--accessToken"); cmd.add("0");
+            cmd.add("--version");    cmd.add(MC_VERSION);
+            cmd.add("--accessToken"); cmd.add(savedToken != null ? savedToken : "0");
             cmd.add("--userType");   cmd.add("legacy");
-            cmd.add("--username");   cmd.add("Player");
+            cmd.add("--username");   cmd.add(savedUser != null ? savedUser : "Player");
+            // Передаём данные сессии клиенту через JVM свойства
+            if (savedToken != null) cmd.add(1, "-Dtheday.token=" + savedToken);
+            if (savedUid   != null) cmd.add(1, "-Dtheday.uid=" + savedUid);
+            if (savedUser  != null) cmd.add(1, "-Dtheday.username=" + savedUser);
 
             Process proc = new ProcessBuilder(cmd)
                 .directory(new File(CLIENT_DIR))
