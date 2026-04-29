@@ -863,11 +863,50 @@ public class TheDayLauncher {
     }
 
     static String findJava() {
-        String javaHome = System.getProperty("java.home");
-        if (javaHome != null) {
+        // 1. Проверяем JAVA_HOME env
+        String javaHome = System.getenv("JAVA_HOME");
+        if (javaHome != null && !javaHome.isEmpty()) {
             File java = new File(javaHome, "bin\\java.exe");
             if (java.exists()) return java.getAbsolutePath();
         }
+        // 2. Ищем java.exe в PATH через where
+        try {
+            Process p = Runtime.getRuntime().exec(new String[]{"where", "java"});
+            String out = new String(p.getInputStream().readAllBytes()).trim();
+            for (String line : out.split("\\r?\\n")) {
+                line = line.trim();
+                // Пропускаем Eclipse и другие IDE
+                if (!line.isEmpty() && !line.toLowerCase().contains("eclipse")
+                        && !line.toLowerCase().contains("intellij")
+                        && !line.toLowerCase().contains("android")) {
+                    return line;
+                }
+            }
+        } catch (Exception ignored) {}
+        // 3. Стандартные пути Java 17/21
+        String[] standardPaths = {
+            "C:\\Program Files\\Java\\jdk-21\\bin\\java.exe",
+            "C:\\Program Files\\Java\\jdk-17\\bin\\java.exe",
+            "C:\\Program Files\\Java\\jdk-21.0.1\\bin\\java.exe",
+            "C:\\Program Files\\Java\\jdk-17.0.9\\bin\\java.exe",
+            "C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.1.12-hotspot\\bin\\java.exe",
+            "C:\\Program Files\\Eclipse Adoptium\\jdk-17.0.9.9-hotspot\\bin\\java.exe",
+        };
+        for (String path : standardPaths) {
+            if (new File(path).exists()) return path;
+        }
+        // 4. Ищем в Program Files
+        for (String base : new String[]{"C:\\Program Files\\Java", "C:\\Program Files\\Eclipse Adoptium", "C:\\Program Files\\Microsoft"}) {
+            File dir = new File(base);
+            if (dir.exists()) {
+                File[] subs = dir.listFiles();
+                if (subs != null) for (File sub : subs) {
+                    File java = new File(sub, "bin\\java.exe");
+                    if (java.exists()) return java.getAbsolutePath();
+                }
+            }
+        }
+        // 5. Fallback — java из PATH
         return "java";
     }
 
