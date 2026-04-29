@@ -115,7 +115,7 @@
       <div class="dl-launcher-icon">🚀</div>
       <div class="dl-launcher-info">
         <h3>TheDay Launcher</h3>
-        <p>Версия v1.1 · Последнее обновление: апрель 2026</p>
+        <p>Версия v1.2 · Последнее обновление: апрель 2026</p>
       </div>
     </div>
 
@@ -179,7 +179,7 @@
   if (btn && hasSub) {
     btn.classList.remove('disabled');
     btn.classList.add('active');
-    if (btnText) btnText.textContent = 'Скачать TheDay Launcher v1.1';
+    if (btnText) btnText.textContent = 'Скачать TheDay Launcher v1.2';
   }
 })();
 
@@ -191,7 +191,7 @@ function selectVersion(el) {
 function handleDownload() {
   const btn = document.getElementById('dlBtn');
   if (!btn || btn.classList.contains('disabled')) return;
-  window.location.href = 'https://github.com/siep42938-source/TheDay-site/releases/download/v1.1/TheDay-Launcher.jar';
+  window.location.href = 'https://github.com/siep42938-source/TheDay-site/releases/download/v1.2/TheDay-Launcher.jar';
 }
 
 function logout() { Auth.logout(); }
