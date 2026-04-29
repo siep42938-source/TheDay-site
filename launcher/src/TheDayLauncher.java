@@ -14,8 +14,8 @@ import javax.imageio.ImageIO;
 public class TheDayLauncher {
     static final String API    = "https://the-day-site-ovk7.vercel.app/api";
     static final String SECRET = "launcher_theday_2026";
-    static final String CLIENT_JAR = "TheDay-Client-v1.2.jar";
-    static final String CLIENT_URL = "https://github.com/siep42938-source/TheDay-site/releases/download/v1.2/TheDay-Client-v1.2.jar";
+    static final String CLIENT_JAR = "TheDay-Client-v1.1.jar";
+    static final String CLIENT_URL = "https://github.com/siep42938-source/TheDay-site/releases/download/v1.1/TheDay-Client-v1.1.jar";
     static final String TOKEN_FILE = System.getProperty("user.home") + "/.theday/session.dat";
 
     static final Color BG       = new Color(13,13,20);
