@@ -280,6 +280,9 @@ public class TheDayLauncher {
 
             // Пробуем запустить Minecraft Launcher с gameDir
             String[] mcExePaths = {
+                // Store / Xbox версия
+                "C:\\Program Files\\WindowsApps\\Microsoft.4297127D64EC6_2.5.2.0_x64__8wekyb3d8bbwe\\Minecraft.exe",
+                // Обычный установщик
                 System.getProperty("user.home") + "\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Minecraft Launcher\\Minecraft Launcher.exe",
                 "C:\\Program Files (x86)\\Minecraft Launcher\\MinecraftLauncher.exe",
                 "C:\\Program Files\\Minecraft Launcher\\MinecraftLauncher.exe",
@@ -290,25 +293,32 @@ public class TheDayLauncher {
             for (String path : mcExePaths) {
                 File exe = new File(path);
                 if (exe.exists()) {
-                    new ProcessBuilder(
-                        exe.getAbsolutePath(),
-                        "--workDir", CLIENT_DIR,
-                        "--gameDir", CLIENT_DIR
-                    ).start();
+                    new ProcessBuilder(exe.getAbsolutePath()).start();
                     started = true;
                     break;
                 }
             }
 
             if (!started) {
-                // Fallback: открываем через URI
-                try {
-                    Desktop.getDesktop().browse(new URI("minecraft://"));
-                } catch (Exception ignored) {
-                    // Последний вариант — через cmd
-                    new ProcessBuilder("cmd", "/c", "start", "", "minecraft://")
-                        .start();
+                // Ищем любой Minecraft.exe в WindowsApps динамически
+                File windowsApps = new File("C:\\Program Files\\WindowsApps");
+                if (windowsApps.exists()) {
+                    File[] dirs = windowsApps.listFiles(f ->
+                        f.isDirectory() && f.getName().startsWith("Microsoft.4297127D64EC6"));
+                    if (dirs != null && dirs.length > 0) {
+                        File mc = new File(dirs[0], "Minecraft.exe");
+                        if (mc.exists()) {
+                            new ProcessBuilder(mc.getAbsolutePath()).start();
+                            started = true;
+                        }
+                    }
                 }
+            }
+
+            if (!started) {
+                // Последний вариант — через explorer
+                new ProcessBuilder("explorer.exe",
+                    "shell:appsFolder\\Microsoft.4297127D64EC6_8wekyb3d8bbwe!Minecraft").start();
             }
 
             pb.setProgress(1f);
