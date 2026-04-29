@@ -14,8 +14,8 @@ import javax.imageio.ImageIO;
 public class TheDayLauncher {
     static final String API    = "https://the-day-site-ovk7.vercel.app/api";
     static final String SECRET = "launcher_theday_2026";
-    static final String CLIENT_JAR = "TheDay-Client-v1.1.jar";
-    static final String CLIENT_URL = "https://github.com/siep42938-source/TheDay-site/releases/download/v1.1/TheDay-Client-v1.1.jar";
+    static final String CLIENT_JAR = "TheDay-Client-v1.2.jar";
+    static final String CLIENT_URL = "https://github.com/siep42938-source/TheDay-site/releases/download/v1.2/TheDay-Client-v1.2.jar";
     static final String TOKEN_FILE = System.getProperty("user.home") + "/.theday/session.dat";
 
     static final Color BG       = new Color(13,13,20);
@@ -171,7 +171,18 @@ public class TheDayLauncher {
         nick.setBounds(112,405,220,20); p.add(nick);
 
         JLabel roleL = new JLabel(role);
-        roleL.setForeground(ORANGE); roleL.setFont(new Font("Segoe UI",Font.PLAIN,13));
+        // Цвет по роли
+        Color roleColor;
+        switch(role) {
+            case "Администратор": case "Admin":    roleColor = new Color(255,80,80);   break;
+            case "Developer":     case "Dev":      roleColor = new Color(41,182,246);  break;
+            case "Media":         case "Медиа":    roleColor = new Color(206,147,216); break;
+            case "Beta":          case "Бета":     roleColor = new Color(255,167,38);  break;
+            case "Sponsor":       case "Спонсор":  roleColor = new Color(255,215,0);   break;
+            case "Модератор":     case "Moder":    roleColor = new Color(102,187,106); break;
+            default:                               roleColor = ORANGE;                 break;
+        }
+        roleL.setForeground(roleColor); roleL.setFont(new Font("Segoe UI",Font.PLAIN,13));
         roleL.setBounds(112,427,220,18); p.add(roleL);
 
         JLabel logout = new JLabel("\u2192");

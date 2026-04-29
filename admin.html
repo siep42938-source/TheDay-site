@@ -28,6 +28,14 @@
     .badge-red{background:rgba(239,83,80,0.15);color:#ef5350}
     .badge-blue{background:rgba(79,195,247,0.15);color:#4fc3f7}
     .badge-gray{background:rgba(255,255,255,0.06);color:#4a5568}
+    /* Role badges */
+    .badge-admin{background:rgba(239,83,80,0.18);color:#ef5350;border:1px solid rgba(239,83,80,0.3)}
+    .badge-media{background:rgba(171,71,188,0.18);color:#ce93d8;border:1px solid rgba(171,71,188,0.3)}
+    .badge-beta{background:rgba(255,167,38,0.18);color:#ffa726;border:1px solid rgba(255,167,38,0.3)}
+    .badge-sponsor{background:rgba(255,215,0,0.18);color:#ffd700;border:1px solid rgba(255,215,0,0.3)}
+    .badge-moder{background:rgba(102,187,106,0.18);color:#66bb6a;border:1px solid rgba(102,187,106,0.3)}
+    .badge-user{background:rgba(255,255,255,0.06);color:#4a5568}
+    .badge-dev{background:rgba(41,182,246,0.18);color:#29b6f6;border:1px solid rgba(41,182,246,0.3)}
     .adm-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid;font-family:inherit;transition:all .2s}
     .adm-btn-blue{background:rgba(79,195,247,0.1);border-color:rgba(79,195,247,0.3);color:#4fc3f7}
     .adm-btn-blue:hover{background:rgba(79,195,247,0.2)}
@@ -249,8 +257,8 @@ function renderUsers(users){
     // Колонка 3: Роль
     const td3 = document.createElement('td');
     const roleBadge = document.createElement('span');
-    roleBadge.className = `badge ${u.role==='Администратор'?'badge-blue':'badge-gray'}`;
-    roleBadge.textContent = u.role || '—';
+    roleBadge.className = `badge ${getRoleBadgeClass(u.role)}`;
+    roleBadge.textContent = u.role || 'Пользователь';
     td3.appendChild(roleBadge);
 
     // Колонка 4: Подписка
@@ -290,6 +298,11 @@ function renderUsers(users){
     const actionsDiv = document.createElement('div');
     actionsDiv.className = 'adm-actions';
 
+    const roleBtn = document.createElement('button');
+    roleBtn.className = 'adm-btn adm-btn-blue';
+    roleBtn.textContent = '🎖 Роль';
+    roleBtn.onclick = () => showRoleModal(u.id, u.username, u.role);
+
     const subBtn = document.createElement('button');
     subBtn.className = 'adm-btn adm-btn-blue';
     subBtn.textContent = '📦 Подписка';
@@ -310,12 +323,73 @@ function renderUsers(users){
     delBtn.textContent = '🗑';
     delBtn.onclick = () => deleteUserAdmin(u.id, u.username);
 
-    actionsDiv.append(subBtn, banBtn, hwidBtn, delBtn);
+    actionsDiv.append(roleBtn, subBtn, banBtn, hwidBtn, delBtn);
     td7.appendChild(actionsDiv);
 
     tr.append(td1, td2, td3, td4, td5, td6, td7);
     tbody.appendChild(tr);
   });
+}
+
+function getRoleBadgeClass(role) {
+  const map = {
+    'Администратор': 'badge-admin',
+    'Admin':         'badge-admin',
+    'Модератор':     'badge-moder',
+    'Moder':         'badge-moder',
+    'Media':         'badge-media',
+    'Медиа':         'badge-media',
+    'Beta':          'badge-beta',
+    'Бета':          'badge-beta',
+    'Sponsor':       'badge-sponsor',
+    'Спонсор':       'badge-sponsor',
+    'Developer':     'badge-dev',
+    'Dev':           'badge-dev',
+    'Пользователь':  'badge-user',
+    'User':          'badge-user',
+  };
+  return map[role] || 'badge-user';
+}
+
+const ROLES = [
+  { value: 'Пользователь', label: '👤 Пользователь' },
+  { value: 'Beta',         label: '🧪 Beta' },
+  { value: 'Sponsor',      label: '💛 Sponsor' },
+  { value: 'Media',        label: '🎬 Media' },
+  { value: 'Модератор',    label: '🛡 Модератор' },
+  { value: 'Администратор',label: '🔴 Администратор' },
+  { value: 'Developer',    label: '💙 Developer' },
+];
+
+function showRoleModal(id, username, currentRole) {
+  const content = document.getElementById('modalContent');
+  const opts = ROLES.map(r =>
+    `<option value="${r.value}"${r.value===currentRole?' selected':''}>${r.label}</option>`
+  ).join('');
+  content.innerHTML = `
+    <h3 style="color:#fff;margin-bottom:16px">🎖 Роль — ${username}</h3>
+    <div class="modal-inner">
+      <div>
+        <label>Выберите роль</label>
+        <select id="roleSelect">${opts}</select>
+      </div>
+      <button class="btn-primary" style="width:100%;justify-content:center" id="saveRoleBtn">Сохранить роль</button>
+      <div class="adm-msg" id="roleMsg"></div>
+    </div>`;
+  document.getElementById('saveRoleBtn').onclick = () => saveRoleAdmin(id);
+  document.getElementById('modalOverlay').classList.add('active');
+}
+
+async function saveRoleAdmin(id) {
+  const role = document.getElementById('roleSelect').value;
+  const msg  = document.getElementById('roleMsg');
+  try {
+    await apiFetch(`/admin/user/${id}/role`, 'POST', { role });
+    msg.className='adm-msg ok'; msg.textContent='✓ Роль обновлена'; msg.style.display='block';
+    setTimeout(()=>{ closeModal(); loadUsers(); }, 1200);
+  } catch(e) {
+    msg.className='adm-msg err'; msg.textContent=e.message; msg.style.display='block';
+  }
 }
 
 function showSubModal(id, username){
