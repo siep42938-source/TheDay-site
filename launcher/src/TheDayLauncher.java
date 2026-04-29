@@ -72,16 +72,17 @@ public class TheDayLauncher {
             // Проверяем сохранённый токен
             String token = loadToken();
             if (token != null) {
-                showMain(); // покажем UI, потом проверим токен в фоне
+                // Показываем экран проверки токена
+                showChecking();
                 frame.setVisible(true);
                 new Thread(() -> {
                     AuthResult r = apiVerify(token);
                     if (r != null && r.ok) {
-                        savedToken = token;
-                        savedUser  = r.username;
-                        savedRole  = r.role;
-                        savedSub   = r.sub;
-                        savedUid   = r.uid;
+                        savedToken  = token;
+                        savedUser   = r.username;
+                        savedRole   = r.role;
+                        savedSub    = r.sub;
+                        savedUid    = r.uid;
                         savedAvatar = r.avatar;
                         loadAvatarImg();
                         SwingUtilities.invokeLater(() -> showMain());
@@ -94,6 +95,40 @@ public class TheDayLauncher {
                 showLogin();
                 frame.setVisible(true);
             }
+            try { frame.setShape(new RoundRectangle2D.Double(0,0,frame.getWidth(),frame.getHeight(),24,24)); } catch(Exception ignored){}
+        });
+    }
+
+    // ── Экран проверки токена ─────────────────────────────────────────────────
+    static void showChecking() {
+        frame.setSize(420, 200);
+        frame.setLocationRelativeTo(null);
+        JPanel p = makeBase(420, 200);
+        int W = 420, H = 200;
+
+        JLabel x = new JLabel("\u00d7");
+        x.setForeground(new Color(100,120,140)); x.setFont(new Font("Segoe UI",Font.PLAIN,20));
+        x.setBounds(W-36,10,26,26); x.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        x.addMouseListener(new MouseAdapter(){
+            public void mouseClicked(MouseEvent e){System.exit(0);}
+            public void mouseEntered(MouseEvent e){x.setForeground(new Color(226,232,240));}
+            public void mouseExited(MouseEvent e){x.setForeground(new Color(100,120,140));}
+        }); p.add(x);
+
+        JLabel logo = new JLabel("TheDay Client");
+        logo.setForeground(new Color(226,232,240));
+        logo.setFont(new Font("Segoe UI",Font.BOLD,16));
+        logo.setHorizontalAlignment(SwingConstants.CENTER);
+        logo.setBounds(0, 60, W, 22); p.add(logo);
+
+        JLabel status = new JLabel("Проверка сессии...");
+        status.setForeground(new Color(100,116,139));
+        status.setFont(new Font("Segoe UI",Font.PLAIN,11));
+        status.setHorizontalAlignment(SwingConstants.CENTER);
+        status.setBounds(0, 90, W, 16); p.add(status);
+
+        frame.setContentPane(p); frame.revalidate(); frame.repaint();
+        SwingUtilities.invokeLater(() -> {
             try { frame.setShape(new RoundRectangle2D.Double(0,0,frame.getWidth(),frame.getHeight(),24,24)); } catch(Exception ignored){}
         });
     }
