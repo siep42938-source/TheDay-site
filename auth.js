@@ -9,10 +9,10 @@ const Auth = {
   _serverCache: null,
   _serverCacheTime: 0,
   async hasServer() {
-    // Всегда используем Vercel бэкенд
-    this._serverCache = true;
+    // Локальный режим — данные хранятся в браузере
+    this._serverCache = false;
     this._serverCacheTime = Date.now();
-    return true;
+    return false;
   },
 
   // Получить всех пользователей

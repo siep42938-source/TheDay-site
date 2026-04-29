@@ -148,7 +148,7 @@ async function sendRegCode() {
 
   setLoading('regBtn','regSpinner','regBtnText', true, 'Отправка...');
   try {
-    const data = await apiPost('/auth/register/send', { username, email, password });
+    const data = await Auth.registerSend({ username, email, password });
     regEmail = email;
     document.getElementById('otpSubtext').textContent = `Код отправлен на ${email}`;
     document.getElementById('step1').style.display = 'none';
@@ -169,7 +169,7 @@ async function verifyRegCode() {
 
   setLoading('otpBtn','otpSpinner','otpBtnText', true, 'Создание...');
   try {
-    const data = await apiPost('/auth/register/verify', { email: regEmail, code });
+    const data = await Auth.registerVerify({ email: regEmail, code });
     localStorage.setItem('td_token', data.token);
     localStorage.setItem('td_user', JSON.stringify(data.user));
     window.location.href = 'account.html';
@@ -185,7 +185,7 @@ async function resendCode() {
   try {
     const username = document.getElementById('regUser').value.trim();
     const password = document.getElementById('regPass').value;
-    await apiPost('/auth/register/send', { username, email: regEmail, password });
+    await Auth.registerSend({ username, email: regEmail, password });
     startResendTimer();
   } catch(e) { showErr('otpErr', e.message); }
 }
