@@ -191,13 +191,9 @@ function selectVersion(el) {
 function handleDownload() {
   const btn = document.getElementById('dlBtn');
   if (!btn || btn.classList.contains('disabled')) return;
-  // Показываем уведомление — реальная ссылка добавляется позже
-  const btnText = document.getElementById('dlBtnText');
-  if (btnText) btnText.textContent = 'Подготовка...';
-  setTimeout(() => {
-    if (btnText) btnText.textContent = 'Скачать TheDay Launcher';
-    alert('Файл лаунчера будет доступен после релиза. Следите за обновлениями в Discord!');
-  }, 800);
+  const tab = document.querySelector('.dl-version-tab.active');
+  const version = tab ? tab.textContent.trim() : '1.21.11';
+  window.location.href = 'https://github.com/siep42938-source/TheDay-site/releases/download/v1.1/TheDay-Client-v1.1.jar';
 }
 
 function logout() { Auth.logout(); }
