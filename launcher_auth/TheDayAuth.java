@@ -43,7 +43,7 @@ public class TheDayAuth {
     // Локальная разработка — раскомментируй:
     // private static final String SERVER = "http://localhost:3001/api";
 
-    private static final String LAUNCHER_KEY = "launcher_theday_2026";
+    private static final String LAUNCHER_KEY = "theday_launcher_secret_2026";
     private static final int TIMEOUT_SEC = 10;
     // ───────────────────────────────────────────────────────
 

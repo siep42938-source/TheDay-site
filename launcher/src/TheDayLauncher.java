@@ -55,7 +55,7 @@ public class TheDayLauncher {
     static java.awt.image.BufferedImage avatarImg = null;
 
     static final String API_URL      = "https://the-day-site-ovk7.vercel.app/api";
-    static final String LAUNCHER_KEY = "launcher_theday_2026";
+    static final String LAUNCHER_KEY = "theday_launcher_secret_2026";
     static final String TOKEN_FILE   = System.getProperty("user.home") + "\\.theday\\session.dat";
 
     // ── main ──────────────────────────────────────────────────────────────────
