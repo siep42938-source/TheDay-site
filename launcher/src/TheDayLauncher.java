@@ -19,8 +19,12 @@ public class TheDayLauncher {
     // ── Константы ─────────────────────────────────────────────────────────────
     static final String API        = "https://the-day-site-ovk7.vercel.app/api";
     static final String SECRET     = "theday_launcher_secret_2026";
-    static final String CLIENT_JAR = "TheDay-Client-v1.2.jar";
-    static final String CLIENT_URL = "https://github.com/siep42938-source/TheDay-site/releases/download/v1.2/TheDay-Client-v1.2.jar";
+    // Путь к jar клиента (Fabric мод)
+    static final String CLIENT_JAR     = "rich-1.0.01.jar";
+    // Путь к папке mods Minecraft (стандартный .minecraft)
+    static final String MINECRAFT_MODS = System.getProperty("user.home") + "/AppData/Roaming/.minecraft/mods";
+    // Путь к Minecraft launcher
+    static final String MINECRAFT_EXE  = System.getProperty("user.home") + "/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Minecraft Launcher/Minecraft Launcher.exe";
     static final String TOKEN_FILE = System.getProperty("user.home") + "/.theday/session.dat";
 
     // Цвета — тёмная тема как на скриншоте
@@ -326,16 +330,66 @@ public class TheDayLauncher {
     // ── Утилиты ───────────────────────────────────────────────────────────────
     static void launchClient(TDProgress pb, JLabel statusTxt, JPanel statusDot, TDBtn launch) {
         try {
+            // Ищем jar мода рядом с лаунчером
             File jar = new File(CLIENT_JAR);
             if (!jar.exists()) {
-                SwingUtilities.invokeLater(() -> statusTxt.setText("Загружаем клиент..."));
-                downloadWithProgress(CLIENT_URL, CLIENT_JAR, (pct, name) ->
-                    SwingUtilities.invokeLater(() -> { statusTxt.setText("Загрузка " + pct + "%"); pb.setProgress(pct / 100f); }));
+                try {
+                    File launcherDir = new File(TheDayLauncher.class.getProtectionDomain()
+                        .getCodeSource().getLocation().toURI()).getParentFile();
+                    jar = new File(launcherDir, CLIENT_JAR);
+                } catch (Exception ignored) {}
             }
-            SwingUtilities.invokeLater(() -> { statusTxt.setText("Запуск..."); pb.setProgress(-1f); });
+            if (!jar.exists()) {
+                final String missing = CLIENT_JAR;
+                SwingUtilities.invokeLater(() -> {
+                    pb.setVisible(false); launch.setVisible(true);
+                    statusTxt.setText("Файл " + missing + " не найден рядом с лаунчером");
+                });
+                return;
+            }
+
+            // Копируем мод в папку mods Minecraft
+            SwingUtilities.invokeLater(() -> statusTxt.setText("Установка мода..."));
+            File modsDir = new File(MINECRAFT_MODS);
+            if (!modsDir.exists()) modsDir.mkdirs();
+
+            // Удаляем старую версию мода если есть
+            File[] oldMods = modsDir.listFiles((d, n) -> n.startsWith("rich-") && n.endsWith(".jar"));
+            if (oldMods != null) for (File old : oldMods) old.delete();
+
+            // Копируем новый мод
+            Files.copy(jar.toPath(), new File(modsDir, CLIENT_JAR).toPath(),
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+            SwingUtilities.invokeLater(() -> { statusTxt.setText("Запуск Minecraft..."); pb.setProgress(-1f); });
             Thread.sleep(600);
-            new ProcessBuilder("java", "-jar", CLIENT_JAR, "--token", token, "--username", username)
-                .inheritIO().start();
+
+            // Запускаем Minecraft Launcher
+            File mcExe = new File(MINECRAFT_EXE);
+            if (mcExe.exists()) {
+                new ProcessBuilder(mcExe.getAbsolutePath()).inheritIO().start();
+            } else {
+                // Fallback — ищем через реестр или стандартные пути
+                String[] fallbacks = {
+                    System.getProperty("user.home") + "/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Minecraft Launcher/Minecraft Launcher.exe",
+                    "C:/Program Files (x86)/Minecraft Launcher/MinecraftLauncher.exe",
+                    "C:/Program Files/Minecraft Launcher/MinecraftLauncher.exe",
+                    "C:/XboxGames/Minecraft Launcher/Content/Minecraft.exe"
+                };
+                boolean started = false;
+                for (String path : fallbacks) {
+                    File f = new File(path);
+                    if (f.exists()) {
+                        new ProcessBuilder(f.getAbsolutePath()).inheritIO().start();
+                        started = true;
+                        break;
+                    }
+                }
+                if (!started) {
+                    // Последний вариант — открыть через shell
+                    Runtime.getRuntime().exec("cmd /c start minecraft://");
+                }
+            }
             SwingUtilities.invokeLater(() -> System.exit(0));
         } catch (Exception ex) {
             SwingUtilities.invokeLater(() -> {
