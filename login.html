@@ -180,7 +180,7 @@ async function sendLoginCode() {
 
   setLoading('loginBtn','loginSpinner','loginBtnText', true, 'Отправка...');
   try {
-    const data = await Auth.loginSend({ email, password: pass });
+    const data = await apiPost('/auth/login/send', { email, password: pass });
     loginEmail = data.email || email;
     document.getElementById('otpSubtext').textContent = `Код отправлен на ${loginEmail.includes('@') ? loginEmail : 'вашу почту'}`;
     document.getElementById('step1').style.display = 'none';
@@ -201,7 +201,7 @@ async function verifyLoginCode() {
 
   setLoading('otpBtn','otpSpinner','otpBtnText', true, 'Проверка...');
   try {
-    const data = await Auth.loginVerify({ email: loginEmail, code });
+    const data = await apiPost('/auth/login/verify', { email: loginEmail, code });
     localStorage.setItem('td_token', data.token);
     localStorage.setItem('td_user', JSON.stringify(data.user));
     window.location.href = 'account.html';
@@ -216,7 +216,7 @@ async function verifyLoginCode() {
 async function resendCode() {
   try {
     const pass = document.getElementById('loginPass').value;
-    const data = await Auth.loginSend({ email: loginEmail, password: pass });
+    const data = await apiPost('/auth/login/send', { email: loginEmail, password: pass });
     startResendTimer();
     showErr('otpErr', '');
   } catch(e) { showErr('otpErr', e.message); }
@@ -237,7 +237,7 @@ async function sendResetCode() {
   showErr('resetErr1', '');
   if (!email) return showErr('resetErr1', 'Введите email');
   try {
-    await Auth.resetSend({ email });
+    await apiPost('/auth/reset/send', { email });
     document.getElementById('resetStep1').style.display = 'none';
     document.getElementById('resetStep2').style.display = 'block';
     initOTP('resetOtpInputs');
@@ -252,7 +252,7 @@ async function confirmReset() {
   if (code.length !== 6) return showErr('resetErr2', 'Введите код');
   if (!newPassword || newPassword.length < 6) return showErr('resetErr2', 'Пароль минимум 6 символов');
   try {
-    await Auth.resetVerify({ email, code, newPassword });
+    await apiPost('/auth/reset/verify', { email, code, newPassword });
     alert('Пароль успешно изменён!');
     backToStep1();
   } catch(e) { showErr('resetErr2', e.message); }
