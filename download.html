@@ -191,9 +191,7 @@ function selectVersion(el) {
 function handleDownload() {
   const btn = document.getElementById('dlBtn');
   if (!btn || btn.classList.contains('disabled')) return;
-  const tab = document.querySelector('.dl-version-tab.active');
-  const version = tab ? tab.textContent.trim() : '1.21.11';
-  window.location.href = 'https://github.com/siep42938-source/TheDay-site/releases/download/v1.1/TheDay-Client-v1.1.jar';
+  window.location.href = 'https://github.com/siep42938-source/TheDay-site/releases/download/v1.1/TheDay-Launcher.jar';
 }
 
 function logout() { Auth.logout(); }
