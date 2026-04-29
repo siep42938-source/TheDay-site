@@ -18,7 +18,7 @@ public class TheDayLauncher {
     // ── Константы ─────────────────────────────────────────────────────────────
     static final String MOD_JAR    = "TheDay-1.0.01.jar";
     static final String MOD_URL    = "https://theday-site.pages.dev/TheDay-1.0.01.jar";
-    static final String MC_VERSION = "1.21.11";
+    static final String MC_VERSION = "1.21.1";
     static final String FABRIC_VER = "0.18.4";
 
     // Папка клиента на диске C
@@ -94,7 +94,7 @@ public class TheDayLauncher {
         title.setFont(new Font("Segoe UI",Font.BOLD,15));
         title.setBounds(lx,13,200,20); p.add(title);
 
-        JLabel ver = new JLabel("1.21.11");
+        JLabel ver = new JLabel("1.21.1");
         ver.setForeground(new Color(135,206,235,180));
         ver.setFont(new Font("Segoe UI",Font.PLAIN,11));
         ver.setBounds(lx+130,15,60,16); p.add(ver);
