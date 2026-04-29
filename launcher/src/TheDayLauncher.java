@@ -160,14 +160,32 @@ public class TheDayLauncher {
             // ── 1. Скачиваем мод если нет ─────────────────────────────────
             File modFile = new File(MODS_DIR, MOD_JAR);
             if (!modFile.exists()) {
-                status(statusTxt, "Скачиваем мод...");
-                pb.setProgress(0.1f);
-                download(MOD_URL, modFile, (pct) ->
-                    SwingUtilities.invokeLater(() -> {
-                        statusTxt.setText("Скачиваем мод... " + pct + "%");
-                        pb.setProgress(pct / 100f * 0.4f);
-                    })
-                );
+                // Сначала ищем рядом с лаунчером
+                File localMod = null;
+                try {
+                    File launcherDir = new File(TheDayLauncher.class.getProtectionDomain()
+                        .getCodeSource().getLocation().toURI()).getParentFile();
+                    File f = new File(launcherDir, MOD_JAR);
+                    if (f.exists()) localMod = f;
+                } catch (Exception ignored) {}
+
+                if (localMod != null) {
+                    // Копируем локальный мод
+                    status(statusTxt, "Установка мода...");
+                    pb.setProgress(0.4f);
+                    Files.copy(localMod.toPath(), modFile.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                } else {
+                    // Скачиваем с сайта
+                    status(statusTxt, "Скачиваем мод...");
+                    pb.setProgress(0.1f);
+                    download(MOD_URL, modFile, (pct) ->
+                        SwingUtilities.invokeLater(() -> {
+                            statusTxt.setText("Скачиваем мод... " + pct + "%");
+                            pb.setProgress(pct / 100f * 0.4f);
+                        })
+                    );
+                }
             } else {
                 // Удаляем старые версии, оставляем текущую
                 File[] old = modsDir.listFiles((d, n) -> n.startsWith("TheDay-") && n.endsWith(".jar") && !n.equals(MOD_JAR));
@@ -266,7 +284,7 @@ public class TheDayLauncher {
     static void download(String url, File dest, DownloadCallback cb) throws Exception {
         HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
         con.setConnectTimeout(15000);
-        con.setReadTimeout(60000);
+        con.setReadTimeout(120000);
         con.setRequestProperty("User-Agent", "TheDay-Launcher/1.2");
         // Следуем редиректам
         con.setInstanceFollowRedirects(true);
