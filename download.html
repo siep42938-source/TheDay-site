@@ -128,9 +128,9 @@
       </div>
 
       <!-- Download Button -->
-      <button class="dl-btn disabled" id="dlBtn" onclick="handleDownload()">
+      <button class="dl-btn active" id="dlBtn" onclick="handleDownload()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        <span id="dlBtnText">Нет активной подписки</span>
+        <span id="dlBtnText">Скачать TheDay Launcher v1.2</span>
       </button>
     </div>
 
@@ -141,22 +141,22 @@
         <div class="dl-step">
           <div class="dl-step-num">1</div>
           <div class="dl-step-info">
-            <h4>Скачайте и запустите лаунчер</h4>
-            <p>Нажмите кнопку скачать выше и запустите загруженный файл TheDay.jar</p>
+            <h4>Скачайте лаунчер</h4>
+            <p>Нажмите кнопку выше и скачайте файл TheDay-Launcher.jar</p>
           </div>
         </div>
         <div class="dl-step">
           <div class="dl-step-num">2</div>
           <div class="dl-step-info">
-            <h4>Войдите в аккаунт</h4>
-            <p>Введите ваш логин и пароль от аккаунта TheDay в лаунчере</p>
+            <h4>Запустите лаунчер</h4>
+            <p>Дважды кликните по TheDay-Launcher.jar (нужна Java 17+). Нажмите «Запустить»</p>
           </div>
         </div>
         <div class="dl-step">
           <div class="dl-step-num">3</div>
           <div class="dl-step-info">
-            <h4>Выберите версию и играйте</h4>
-            <p>Выберите нужную версию Minecraft и нажмите «Играть». Клиент загрузится автоматически</p>
+            <h4>Играйте</h4>
+            <p>Лаунчер автоматически установит мод и откроет Minecraft. Выберите профиль Fabric 1.21.11 и нажмите «Играть»</p>
           </div>
         </div>
       </div>
@@ -166,31 +166,12 @@
 
 <script src="api.js"></script><script src="auth.js"></script><script src="smooth.js"></script><script src="theme.js"></script><script src="main.js"></script>
 <script>
-(function() {
-  const user = Auth.currentUser();
-  if (!user) { window.location.href = 'login.html'; return; }
-
-  const hasSub = !!(user.sub && (
-    user.sub === 'Навсегда' ||
-    (user.subExpires && new Date(user.subExpires) > new Date())
-  ));
-  const btn = document.getElementById('dlBtn');
-  const btnText = document.getElementById('dlBtnText');
-  if (btn && hasSub) {
-    btn.classList.remove('disabled');
-    btn.classList.add('active');
-    if (btnText) btnText.textContent = 'Скачать TheDay Launcher v1.2';
-  }
-})();
-
 function selectVersion(el) {
   document.querySelectorAll('.dl-version-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
 }
 
 function handleDownload() {
-  const btn = document.getElementById('dlBtn');
-  if (!btn || btn.classList.contains('disabled')) return;
   window.location.href = 'TheDay-Launcher.jar';
 }
 

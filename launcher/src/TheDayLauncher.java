@@ -6,45 +6,29 @@ import java.awt.geom.*;
 import java.awt.image.*;
 import java.io.*;
 import java.net.*;
-import java.net.http.*;
 import java.nio.file.*;
-import java.time.Duration;
 import java.util.*;
-import java.util.Base64;
 import javax.imageio.ImageIO;
 import javax.swing.text.JTextComponent;
 
 public class TheDayLauncher {
 
     // ── Константы ─────────────────────────────────────────────────────────────
-    static final String API        = "https://the-day-site-ovk7.vercel.app/api";
-    static final String SECRET     = "theday_launcher_secret_2026";
-    // Путь к jar клиента (Fabric мод)
-    static final String CLIENT_JAR     = "rich-1.0.01.jar";
-    // Путь к папке mods Minecraft (стандартный .minecraft)
-    static final String MINECRAFT_MODS = System.getProperty("user.home") + "/AppData/Roaming/.minecraft/mods";
-    // Путь к Minecraft launcher
-    static final String MINECRAFT_EXE  = System.getProperty("user.home") + "/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Minecraft Launcher/Minecraft Launcher.exe";
-    static final String TOKEN_FILE = System.getProperty("user.home") + "/.theday/session.dat";
+    static final String MOD_JAR        = "rich-1.0.01.jar";
+    static final String MINECRAFT_MODS = System.getProperty("user.home") + "\\AppData\\Roaming\\.minecraft\\mods";
 
-    // Цвета — тёмная тема как на скриншоте
-    static final Color BG       = new Color(18, 18, 20);
-    static final Color CARD     = new Color(24, 24, 28);
-    static final Color CARD2    = new Color(28, 28, 34);
-    static final Color BORDER   = new Color(45, 45, 52);
-    static final Color ACCENT   = new Color(80, 180, 120);
-    static final Color ACCENT2  = new Color(60, 160, 100);
-    static final Color WHITE    = Color.WHITE;
-    static final Color GREY     = new Color(160, 160, 170);
-    static final Color GREY2    = new Color(100, 100, 110);
-    static final Color ERR      = new Color(255, 80, 80);
-    static final Color PURPLE   = new Color(90, 80, 210);
-    static final Color PURPLE2  = new Color(120, 100, 255);
+    // Цвета
+    static final Color WHITE  = Color.WHITE;
+    static final Color GREY   = new Color(160, 160, 170);
+    static final Color GREY2  = new Color(100, 100, 110);
+    static final Color ERR    = new Color(255, 80, 80);
+    static final Color ACCENT  = new Color(135, 206, 235);
+    static final Color ACCENT2 = new Color(79, 195, 247);
+    static final Color PURPLE  = new Color(90, 80, 210);
+    static final Color PURPLE2 = new Color(120, 100, 255);
 
-    static String token = "", username = "", role = "Пользователь", sub = "", avatarB64 = null;
     static JFrame frame;
-    static String cachedHWID = null;
-    static float  fadeIn = 0f;
+    static float  fadeIn  = 0f;
     static long   fadeStart = 0L;
 
     // ── main ──────────────────────────────────────────────────────────────────
@@ -58,125 +42,9 @@ public class TheDayLauncher {
             frame.setBackground(new Color(0, 0, 0, 0));
             frame.getRootPane().setOpaque(false);
             frame.setResizable(false);
-            // Превью режим — сразу главный экран
-            boolean preview = args.length > 0 && args[0].equals("--preview");
-            if (preview) {
-                username = "Dem4chik"; role = "Beta"; sub = "30 дней";
-                showMain();
-            } else {
-                String saved = loadToken();
-                if (saved != null) verifyAndShow(saved);
-                else showLogin();
-            }
+            showMain();
             frame.setVisible(true);
-            try { frame.setShape(new RoundRectangle2D.Double(0,0,frame.getWidth(),frame.getHeight(),28,28)); } catch(Exception ignored){}
-        });
-    }
-
-    // ── Проверка токена ───────────────────────────────────────────────────────
-    static void verifyAndShow(String t) {
-        frame.setSize(700, 420);
-        frame.setLocationRelativeTo(null);
-        JPanel p = makeBase(700, 420);
-        TDSpinner sp = new TDSpinner("Проверка сессии");
-        sp.setBounds(250, 170, 200, 80);
-        p.add(sp);
-        frame.setContentPane(p);
-        frame.revalidate();
-        new Thread(() -> {
-            String hwid = getHWID();
-            AuthResult r = apiPost("/launcher/verify",
-                "{\"token\":\"" + esc(t) + "\",\"hwid\":\"" + esc(hwid) + "\"}");
-            SwingUtilities.invokeLater(() -> {
-                if (r.ok) { token = t; username = r.username; role = r.role; sub = r.sub; loadAvatar(); showMain(); }
-                else { deleteToken(); showLogin(); }
-            });
-        }).start();
-    }
-    // ── Экран входа ───────────────────────────────────────────────────────────
-    static void showLogin() {
-        frame.setSize(460, 480);
-        frame.setLocationRelativeTo(null);
-        fadeIn = 0f; fadeStart = System.currentTimeMillis();
-        JPanel p = makeBase(460, 480);
-
-        // X кнопка
-        JLabel x = new JLabel("\u00d7");
-        x.setForeground(GREY2); x.setFont(new Font("Segoe UI", Font.PLAIN, 22));
-        x.setBounds(420, 14, 28, 28); x.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        x.addMouseListener(new MouseAdapter() {
-            public void mouseClicked(MouseEvent e) { System.exit(0); }
-            public void mouseEntered(MouseEvent e) { x.setForeground(WHITE); }
-            public void mouseExited(MouseEvent e)  { x.setForeground(GREY2); }
-        });
-        p.add(x);
-
-        int cx = 40, cw = 380;
-
-        // Заголовок
-        JLabel title = new JLabel("Авторизация");
-        title.setForeground(new Color(255, 255, 255));
-        title.setFont(new Font("Segoe UI", Font.BOLD, 30));
-        title.setBounds(cx, 80, cw, 40);
-        p.add(title);
-
-        JLabel sub2 = new JLabel("Войдите, чтобы попасть в свой профиль");
-        sub2.setForeground(new Color(185, 178, 220));
-        sub2.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        sub2.setBounds(cx, 124, cw, 20);
-        p.add(sub2);
-
-        // Поля
-        TDField email = new TDField("Введите ваш логин или почту", false);
-        email.setBounds(cx, 158, cw, 52); p.add(email);
-
-        TDField pass = new TDField("Введите пароль", true);
-        pass.setBounds(cx, 222, cw, 52); p.add(pass);
-
-        JLabel err = new JLabel("");
-        err.setForeground(ERR);
-        err.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        err.setBounds(cx, 282, cw, 16); p.add(err);
-
-        TDBtn btn = new TDBtn("Войти", PURPLE, PURPLE2);
-        btn.setBounds(cx, 300, cw, 52); p.add(btn);
-
-        JLabel forgot = new JLabel("Забыли пароль");
-        forgot.setForeground(GREY2);
-        forgot.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        forgot.setBounds(cx, 364, cw, 20);
-        forgot.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        forgot.addMouseListener(new MouseAdapter() {
-            public void mouseClicked(MouseEvent e) { openBrowser("https://the-day-site.pages.dev/login.html"); }
-            public void mouseEntered(MouseEvent e) { forgot.setForeground(PURPLE2); }
-            public void mouseExited(MouseEvent e)  { forgot.setForeground(GREY2); }
-        });
-        p.add(forgot);
-
-        ActionListener doLogin = e -> {
-            String em = email.val(), pw = pass.val();
-            if (em.isEmpty() || pw.isEmpty()) { err.setText("Заполните все поля"); return; }
-            btn.setEnabled(false); btn.setText("Входим..."); err.setText("");
-            new Thread(() -> {
-                String hwid = getHWID();
-                AuthResult r = apiPost("/launcher/login",
-                    "{\"email\":\"" + esc(em) + "\",\"password\":\"" + esc(pw) + "\",\"hwid\":\"" + esc(hwid) + "\"}");
-                SwingUtilities.invokeLater(() -> {
-                    btn.setEnabled(true); btn.setText("Войти");
-                    if (r.ok) {
-                        saveToken(r.token); token = r.token; username = r.username;
-                        role = r.role; sub = r.sub; loadAvatar(); showMain();
-                    } else {
-                        err.setText(r.error != null ? r.error : "Ошибка входа");
-                    }
-                });
-            }).start();
-        };
-        btn.addActionListener(doLogin);
-        email.addAL(doLogin); pass.addAL(doLogin);
-        frame.setContentPane(p); frame.revalidate(); frame.repaint();
-        SwingUtilities.invokeLater(() -> {
-            try { frame.setShape(new RoundRectangle2D.Double(0,0,frame.getWidth(),frame.getHeight(),28,28)); } catch(Exception ignored){}
+            try { frame.setShape(new RoundRectangle2D.Double(0,0,frame.getWidth(),frame.getHeight(),24,24)); } catch(Exception ignored){}
         });
     }
 
@@ -187,7 +55,7 @@ public class TheDayLauncher {
         JPanel p = makeMainBase(780, 440);
         int W = 780, lx = 28, lw = 330;
 
-        // ── X кнопка ──────────────────────────────────────────────────────────
+        // X кнопка
         JLabel x = new JLabel("\u00d7");
         x.setForeground(new Color(100,120,140)); x.setFont(new Font("Segoe UI",Font.PLAIN,20));
         x.setBounds(W-36,10,26,26); x.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -197,7 +65,7 @@ public class TheDayLauncher {
             public void mouseExited(MouseEvent e){x.setForeground(new Color(100,120,140));}
         }); p.add(x);
 
-        // ── Заголовок ─────────────────────────────────────────────────────────
+        // Заголовок
         JLabel title = new JLabel("TheDay Client");
         title.setForeground(new Color(226,232,240));
         title.setFont(new Font("Segoe UI",Font.BOLD,15));
@@ -208,13 +76,11 @@ public class TheDayLauncher {
         ver.setFont(new Font("Segoe UI",Font.PLAIN,11));
         ver.setBounds(lx+130,15,60,16); p.add(ver);
 
-        // ── Разделитель ───────────────────────────────────────────────────────
         JSeparator sep0 = new JSeparator();
         sep0.setForeground(new Color(135,206,235,15));
         sep0.setBounds(0,42,390,1); p.add(sep0);
 
-        // ── Карточка описания (рисуется в makeMainBase) ───────────────────────
-        // Текст описания
+        // Описание
         JLabel d1 = new JLabel("Приватный клиент с мощной Combat");
         d1.setForeground(new Color(203,213,225)); d1.setFont(new Font("Segoe UI",Font.PLAIN,12));
         d1.setBounds(lx+12,60,lw-16,18); p.add(d1);
@@ -235,15 +101,14 @@ public class TheDayLauncher {
         d5.setForeground(new Color(148,163,184)); d5.setFont(new Font("Segoe UI",Font.PLAIN,11));
         d5.setBounds(lx+12,138,lw-16,16); p.add(d5);
 
-        // ── Кнопка запуска ────────────────────────────────────────────────────
+        // Кнопка запуска
         TDBtn launch = new TDBtn("Запустить  \u25ba", new Color(135,206,235), new Color(79,195,247));
         launch.setBounds(lx,172,lw,44); p.add(launch);
 
         TDProgress pb = new TDProgress();
         pb.setBounds(lx,172,lw,44); pb.setVisible(false); p.add(pb);
 
-        // ── Статус ────────────────────────────────────────────────────────────
-        // Точка-индикатор рисуется кастомно
+        // Статус
         JPanel statusDot = new JPanel(){
             protected void paintComponent(Graphics g){
                 Graphics2D g2=(Graphics2D)g;
@@ -257,139 +122,78 @@ public class TheDayLauncher {
         JLabel statusTxt = new JLabel("Готов к запуску");
         statusTxt.setForeground(new Color(100,116,139));
         statusTxt.setFont(new Font("Segoe UI",Font.PLAIN,11));
-        statusTxt.setBounds(lx+16,226,220,18); p.add(statusTxt);
+        statusTxt.setBounds(lx+16,226,280,18); p.add(statusTxt);
 
-        // ── Разделитель перед профилем ────────────────────────────────────────
-        JSeparator sep2 = new JSeparator();
-        sep2.setForeground(new Color(135,206,235,15));
-        sep2.setBounds(lx,258,lw+12,1); p.add(sep2);
-
-        // ── Аватар ────────────────────────────────────────────────────────────
-        TDAvatar av = new TDAvatar(avatarB64,40);
-        av.setBounds(lx+12,270,40,40); p.add(av);
-
-        // ── Имя пользователя ──────────────────────────────────────────────────
-        JLabel uname = new JLabel(username);
-        uname.setForeground(new Color(226,232,240));
-        uname.setFont(new Font("Segoe UI",Font.BOLD,13));
-        uname.setBounds(lx+62,272,200,18); p.add(uname);
-
-        // ── Роль ──────────────────────────────────────────────────────────────
-        Color rc;
-        switch(role){
-            case "Администратор":case "Admin":rc=new Color(248,113,113);break;
-            case "Developer":case "Dev":rc=new Color(56,189,248);break;
-            case "Media":case "Медиа":rc=new Color(192,132,252);break;
-            case "Beta":case "Бета":rc=new Color(251,191,36);break;
-            case "Sponsor":case "Спонсор":rc=new Color(250,204,21);break;
-            case "Модератор":case "Moder":rc=new Color(74,222,128);break;
-            default:rc=new Color(135,206,235);break;
-        }
-        JLabel roleL = new JLabel(role);
-        roleL.setForeground(rc);
-        roleL.setFont(new Font("Segoe UI",Font.PLAIN,11));
-        roleL.setBounds(lx+62,292,200,15); p.add(roleL);
-
-        // ── Подписка ──────────────────────────────────────────────────────────
-        String subTxt=(sub!=null&&!sub.isEmpty())?sub:"Нет подписки";
-        Color subC=(sub!=null&&!sub.isEmpty())?new Color(135,206,235,180):new Color(71,85,105);
-        JLabel subL=new JLabel(subTxt);
-        subL.setForeground(subC);
-        subL.setFont(new Font("Segoe UI",Font.PLAIN,10));
-        subL.setBounds(lx+62,308,200,14); p.add(subL);
-
-        // ── Выйти ─────────────────────────────────────────────────────────────
-        JLabel logout=new JLabel("Выйти");
-        logout.setForeground(new Color(71,85,105));
-        logout.setFont(new Font("Segoe UI",Font.PLAIN,11));
-        logout.setBounds(lx+12,398,50,16);
-        logout.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        logout.addMouseListener(new MouseAdapter(){
-            public void mouseClicked(MouseEvent e){deleteToken();token=null;avatarB64=null;showLogin();}
-            public void mouseEntered(MouseEvent e){logout.setForeground(new Color(248,113,113));}
-            public void mouseExited(MouseEvent e){logout.setForeground(new Color(71,85,105));}
-        }); p.add(logout);
-
-        // ── Превью справа ─────────────────────────────────────────────────────
+        // Превью справа
         PreviewPanel preview = new PreviewPanel();
         preview.setBounds(385,0,395,440); p.add(preview);
 
-        launch.addActionListener(e->{
-            launch.setVisible(false);pb.setVisible(true);
-            statusTxt.setText("Загрузка...");
-            statusDot.repaint();
-            new Thread(()->launchClient(pb,statusTxt,statusDot,launch)).start();
+        launch.addActionListener(e -> {
+            launch.setVisible(false); pb.setVisible(true);
+            statusTxt.setText("Подготовка...");
+            new Thread(() -> launchClient(pb, statusTxt, launch)).start();
         });
 
         frame.setContentPane(p); frame.revalidate(); frame.repaint();
-        SwingUtilities.invokeLater(()->{
-            try{frame.setShape(new RoundRectangle2D.Double(0,0,frame.getWidth(),frame.getHeight(),24,24));}catch(Exception ignored){}
+        SwingUtilities.invokeLater(() -> {
+            try { frame.setShape(new RoundRectangle2D.Double(0,0,frame.getWidth(),frame.getHeight(),24,24)); } catch(Exception ignored){}
         });
     }
 
-    // ── Утилиты ───────────────────────────────────────────────────────────────
-    static void launchClient(TDProgress pb, JLabel statusTxt, JPanel statusDot, TDBtn launch) {
+    // ── Запуск клиента ────────────────────────────────────────────────────────
+    static void launchClient(TDProgress pb, JLabel statusTxt, TDBtn launch) {
         try {
-            // Ищем jar мода рядом с лаунчером
-            File jar = new File(CLIENT_JAR);
+            // 1. Ищем мод рядом с лаунчером
+            File jar = new File(MOD_JAR);
             if (!jar.exists()) {
                 try {
                     File launcherDir = new File(TheDayLauncher.class.getProtectionDomain()
                         .getCodeSource().getLocation().toURI()).getParentFile();
-                    jar = new File(launcherDir, CLIENT_JAR);
+                    jar = new File(launcherDir, MOD_JAR);
                 } catch (Exception ignored) {}
             }
             if (!jar.exists()) {
-                final String missing = CLIENT_JAR;
-                SwingUtilities.invokeLater(() -> {
-                    pb.setVisible(false); launch.setVisible(true);
-                    statusTxt.setText("Файл " + missing + " не найден рядом с лаунчером");
-                });
+                final String msg = "Файл " + MOD_JAR + " не найден рядом с лаунчером";
+                SwingUtilities.invokeLater(() -> { pb.setVisible(false); launch.setVisible(true); statusTxt.setText(msg); });
                 return;
             }
 
-            // Копируем мод в папку mods Minecraft
-            SwingUtilities.invokeLater(() -> statusTxt.setText("Установка мода..."));
+            // 2. Копируем мод в .minecraft/mods
+            SwingUtilities.invokeLater(() -> { statusTxt.setText("Установка мода..."); pb.setProgress(0.3f); });
             File modsDir = new File(MINECRAFT_MODS);
             if (!modsDir.exists()) modsDir.mkdirs();
-
-            // Удаляем старую версию мода если есть
-            File[] oldMods = modsDir.listFiles((d, n) -> n.startsWith("rich-") && n.endsWith(".jar"));
-            if (oldMods != null) for (File old : oldMods) old.delete();
-
-            // Копируем новый мод
-            Files.copy(jar.toPath(), new File(modsDir, CLIENT_JAR).toPath(),
+            // Удаляем старые версии мода
+            File[] old = modsDir.listFiles((d, n) -> n.startsWith("rich-") && n.endsWith(".jar"));
+            if (old != null) for (File f : old) f.delete();
+            Files.copy(jar.toPath(), new File(modsDir, MOD_JAR).toPath(),
                 java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 
-            SwingUtilities.invokeLater(() -> { statusTxt.setText("Запуск Minecraft..."); pb.setProgress(-1f); });
-            Thread.sleep(600);
+            // 3. Запускаем Minecraft Launcher
+            SwingUtilities.invokeLater(() -> { statusTxt.setText("Запуск Minecraft..."); pb.setProgress(0.8f); });
+            Thread.sleep(500);
 
-            // Запускаем Minecraft Launcher
-            File mcExe = new File(MINECRAFT_EXE);
-            if (mcExe.exists()) {
-                new ProcessBuilder(mcExe.getAbsolutePath()).inheritIO().start();
-            } else {
-                // Fallback — ищем через реестр или стандартные пути
-                String[] fallbacks = {
-                    System.getProperty("user.home") + "/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Minecraft Launcher/Minecraft Launcher.exe",
-                    "C:/Program Files (x86)/Minecraft Launcher/MinecraftLauncher.exe",
-                    "C:/Program Files/Minecraft Launcher/MinecraftLauncher.exe",
-                    "C:/XboxGames/Minecraft Launcher/Content/Minecraft.exe"
-                };
-                boolean started = false;
-                for (String path : fallbacks) {
-                    File f = new File(path);
-                    if (f.exists()) {
-                        new ProcessBuilder(f.getAbsolutePath()).inheritIO().start();
-                        started = true;
-                        break;
-                    }
-                }
-                if (!started) {
-                    // Последний вариант — открыть через shell
-                    Runtime.getRuntime().exec("cmd /c start minecraft://");
+            String home = System.getProperty("user.home");
+            String[] candidates = {
+                home + "\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Minecraft Launcher\\Minecraft Launcher.exe",
+                "C:\\Program Files (x86)\\Minecraft Launcher\\MinecraftLauncher.exe",
+                "C:\\Program Files\\Minecraft Launcher\\MinecraftLauncher.exe",
+                "C:\\XboxGames\\Minecraft Launcher\\Content\\Minecraft.exe",
+                home + "\\AppData\\Local\\Packages\\Microsoft.4297127D64EC6_8wekyb3d8bbwe\\LocalCache\\Local\\runtime\\java-runtime-delta\\windows-x64\\java-runtime-delta\\bin\\javaw.exe"
+            };
+            boolean started = false;
+            for (String path : candidates) {
+                File f = new File(path);
+                if (f.exists()) {
+                    new ProcessBuilder(f.getAbsolutePath()).inheritIO().start();
+                    started = true;
+                    break;
                 }
             }
+            if (!started) {
+                // Открываем через URI схему minecraft://
+                Runtime.getRuntime().exec(new String[]{"cmd", "/c", "start", "minecraft://"});
+            }
+
             SwingUtilities.invokeLater(() -> System.exit(0));
         } catch (Exception ex) {
             SwingUtilities.invokeLater(() -> {
@@ -399,69 +203,7 @@ public class TheDayLauncher {
         }
     }
 
-    interface ProgressCallback { void update(int pct, String name); }
-
-    static void downloadWithProgress(String url, String dest, ProgressCallback cb) throws Exception {
-        HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
-        con.setConnectTimeout(10000); con.setReadTimeout(60000);
-        int total = con.getContentLength();
-        try (InputStream in = con.getInputStream(); FileOutputStream out = new FileOutputStream(dest)) {
-            byte[] buf = new byte[8192]; int read; long done = 0;
-            while ((read = in.read(buf)) != -1) { out.write(buf, 0, read); done += read; if (total > 0) cb.update((int)(done*100/total), dest); }
-        }
-    }
-
-    static void loadAvatar() {
-        new Thread(() -> {
-            try {
-                AuthResult r = apiPost("/launcher/profile", "{\"token\":\"" + esc(token) + "\"}");
-                if (r.ok && r.avatarB64 != null) avatarB64 = r.avatarB64;
-            } catch (Exception ignored) {}
-        }).start();
-    }
-
-    static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
-
-    static AuthResult apiPost(String path, String body) {
-        AuthResult r = new AuthResult();
-        try {
-            HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(API + path))
-                .header("Content-Type", "application/json")
-                .header("x-launcher-secret", SECRET)
-                .POST(HttpRequest.BodyPublishers.ofString(body))
-                .timeout(Duration.ofSeconds(10)).build();
-            HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
-            String j = resp.body();
-            r.ok = j.contains("\"ok\":true");
-            if (r.ok) { r.token=ex(j,"token"); r.username=ex(j,"username"); r.role=ex(j,"role"); r.sub=ex(j,"sub"); r.avatarB64=ex(j,"avatar"); }
-            else { r.error = ex(j, "error"); if (r.error == null) r.error = "Ошибка сервера"; }
-        } catch (Exception e) { r.ok = false; r.error = "Сервер недоступен"; }
-        return r;
-    }
-
-    static class AuthResult { boolean ok; String token, username, role, sub, error, avatarB64; }
-
-    static String getHWID() {
-        if (cachedHWID != null) return cachedHWID;
-        try {
-            Process p = Runtime.getRuntime().exec(new String[]{"wmic","csproduct","get","UUID"});
-            String out = new String(p.getInputStream().readAllBytes()).trim();
-            for (String l : out.split("\\r?\\n")) { l = l.trim(); if (!l.isEmpty() && !l.equalsIgnoreCase("UUID")) { cachedHWID = "WIN-" + l.replaceAll("[^A-Za-z0-9-]",""); return cachedHWID; } }
-        } catch (Exception ignored) {}
-        cachedHWID = "PC-" + System.getenv("COMPUTERNAME") + "-" + System.getProperty("user.name");
-        return cachedHWID;
-    }
-
-    static String loadToken() { try { Path f = Path.of(TOKEN_FILE); if (Files.exists(f)) return Files.readString(f).trim(); } catch (Exception e) {} return null; }
-    static void saveToken(String t) { try { Path d = Path.of(System.getProperty("user.home"), ".theday"); Files.createDirectories(d); Files.writeString(d.resolve("session.dat"), t); } catch (Exception e) {} }
-    static void deleteToken() { try { Files.deleteIfExists(Path.of(TOKEN_FILE)); } catch (Exception e) {} }
     static void openBrowser(String u) { try { Desktop.getDesktop().browse(URI.create(u)); } catch (Exception e) {} }
-
-    static String ex(String j, String k) { String bl = exBlock(j,"user"); String v = exStr(bl!=null?bl:j,k); if (v==null) v=exStr(j,k); return v; }
-    static String exStr(String j, String k) { String s="\""+k+"\":\""; int i=j.indexOf(s); if(i<0)return null; i+=s.length(); StringBuilder sb=new StringBuilder(); while(i<j.length()){char c=j.charAt(i);if(c=='\\'&&i+1<j.length()){i++;sb.append(j.charAt(i++));continue;}if(c=='"')break;sb.append(c);i++;} return sb.toString(); }
-    static String exBlock(String j, String k) { String s="\""+k+"\":{"; int i=j.indexOf(s); if(i<0)return null; i+=s.length()-1; int d=0; StringBuilder sb=new StringBuilder(); while(i<j.length()){char c=j.charAt(i);if(c=='{')d++;else if(c=='}'){d--;if(d==0){sb.append(c);break;}}sb.append(c);i++;} return sb.toString(); }
-    static String esc(String s) { if(s==null)return""; return s.replace("\\","\\\\").replace("\"","\\\""); }
 
     // ── Базовая панель (экран входа) ──────────────────────────────────────────
     static float[] px = null, py, pAlpha, pSpeed;
@@ -887,7 +629,7 @@ class TDAvatar extends JLabel {
         Graphics2D g2=(Graphics2D)g;g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setClip(new Ellipse2D.Float(0,0,sz,sz));
         if(img!=null){g2.drawImage(img,0,0,sz,sz,null);}
-        else{g2.setColor(TheDayLauncher.PURPLE);g2.fillOval(0,0,sz,sz);g2.setColor(Color.WHITE);g2.setFont(new Font("Segoe UI",Font.BOLD,sz/2));FontMetrics fm=g2.getFontMetrics();String ini=TheDayLauncher.username.isEmpty()?"?":String.valueOf(TheDayLauncher.username.charAt(0)).toUpperCase();g2.drawString(ini,(sz-fm.stringWidth(ini))/2,(sz-fm.getHeight())/2+fm.getAscent());}
+        else{g2.setColor(TheDayLauncher.PURPLE);g2.fillOval(0,0,sz,sz);g2.setColor(Color.WHITE);g2.setFont(new Font("Segoe UI",Font.BOLD,sz/2));FontMetrics fm=g2.getFontMetrics();String ini="T";g2.drawString(ini,(sz-fm.stringWidth(ini))/2,(sz-fm.getHeight())/2+fm.getAscent());}
     }
 }
 
