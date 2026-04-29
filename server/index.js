@@ -389,7 +389,7 @@ app.post('/api/launcher/verify', launcher, lim(30,5), async (req,res)=>{
     if(!hasSub) return res.status(403).json({error:'Подписка истекла'});
     if(hwid&&user.hwid&&user.hwid!==hwid) return res.status(403).json({error:'HWID не совпадает'});
     if(hwid&&!user.hwid) await db.updateUser(user.id,{hwid});
-    res.json({ok:true,user:{id:user.id,username:user.username,role:user.role,sub:user.sub,subExpires:user.subExpires}});
+    res.json({ok:true,user:{id:user.id,username:user.username,role:user.role,sub:user.sub,subExpires:user.subExpires,hwid:user.hwid||hwid||null}});
   } catch { res.status(401).json({error:'Токен недействителен'}); }
 });
 

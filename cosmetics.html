@@ -96,244 +96,50 @@
     </nav>
   </aside>
 
-  <main class="dash-main">
+  <main class="dash-main" style="position:relative">
     <div class="dash-breadcrumb"><a href="index.html">Главная</a><span>›</span><a href="account.html">Мой профиль</a><span>›</span>Косметика</div>
     <div style="font-size:24px;font-weight:800;color:#fff;margin-bottom:6px">Косметика</div>
     <div style="font-size:13px;color:#4a5568;margin-bottom:24px">Настройте внешний вид вашего персонажа</div>
 
-    <div class="cosm-layout">
-      <!-- 3D Viewer -->
-      <div class="cosm-viewer">
-        <div class="cosm-viewer-title">Предпросмотр</div>
-        <canvas id="steveCanvas" width="188" height="240"></canvas>
-        <div class="cosm-viewer-hint">Перетащите для вращения</div>
-        <div class="cosm-equipped" id="equippedList">
-          <div class="cosm-eq-row"><span class="cosm-eq-slot">Шляпа</span><span class="cosm-eq-none" id="eq-hat">Нет</span></div>
-          <div class="cosm-eq-row"><span class="cosm-eq-slot">Плащ</span><span class="cosm-eq-none" id="eq-cape">Нет</span></div>
-          <div class="cosm-eq-row"><span class="cosm-eq-slot">Скин</span><span class="cosm-eq-none" id="eq-skin">Стандартный</span></div>
-          <div class="cosm-eq-row"><span class="cosm-eq-slot">Эффект</span><span class="cosm-eq-none" id="eq-effect">Нет</span></div>
+    <!-- Заблокировано -->
+    <div style="position:relative;pointer-events:none;user-select:none;opacity:0.35;filter:blur(2px)">
+      <div class="cosm-layout">
+        <div class="cosm-viewer">
+          <div class="cosm-viewer-title">Предпросмотр</div>
+          <canvas id="steveCanvas" width="188" height="240"></canvas>
+          <div class="cosm-viewer-hint">Перетащите для вращения</div>
+        </div>
+        <div class="cosm-right">
+          <div class="cosm-tabs">
+            <button class="cosm-tab active">Все</button>
+            <button class="cosm-tab">Мои</button>
+            <button class="cosm-tab">Магазин</button>
+          </div>
+          <div class="cosm-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+            <div class="cosm-card" style="height:180px"></div>
+            <div class="cosm-card" style="height:180px"></div>
+            <div class="cosm-card" style="height:180px"></div>
+            <div class="cosm-card" style="height:180px"></div>
+          </div>
         </div>
       </div>
+    </div>
 
-      <!-- Items -->
-      <div class="cosm-right">
-        <div class="cosm-tabs">
-          <button class="cosm-tab active" onclick="setTab('all',this)">Все</button>
-          <button class="cosm-tab" onclick="setTab('owned',this)">Мои</button>
-          <button class="cosm-tab" onclick="setTab('shop',this)">Магазин</button>
-        </div>
-        <div class="cosm-cats">
-          <button class="cosm-cat active" onclick="setCat('all',this)">Все</button>
-          <button class="cosm-cat" onclick="setCat('skin',this)">Скины</button>
-          <button class="cosm-cat" onclick="setCat('hat',this)">Шляпы</button>
-          <button class="cosm-cat" onclick="setCat('cape',this)">Плащи</button>
-          <button class="cosm-cat" onclick="setCat('effect',this)">Эффекты</button>
-        </div>
-        <div class="cosm-grid" id="cosmGrid"></div>
+    <!-- Оверлей блокировки -->
+    <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;z-index:10;pointer-events:none">
+      <div style="background:rgba(10,10,18,0.92);border:1px solid rgba(135,206,235,0.2);border-radius:20px;padding:40px 56px;text-align:center;backdrop-filter:blur(12px);box-shadow:0 24px 64px rgba(0,0,0,0.7)">
+        <div style="font-size:52px;margin-bottom:16px">🔒</div>
+        <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:8px">Скоро</div>
+        <div style="font-size:13px;color:#4a5568;max-width:280px;line-height:1.6">Раздел косметики находится в разработке и будет доступен в ближайшем обновлении</div>
       </div>
     </div>
   </main>
 </div>
 
-<!-- Modal -->
-<div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
-  <div class="glass-card modal-box" onclick="event.stopPropagation()" style="max-width:380px">
-    <button class="modal-close" onclick="closeModal()">✕</button>
-    <div id="modalContent"></div>
-  </div>
-</div>
-
-<script src="api.js"></script><script src="auth.js"></script><script src="smooth.js"></script><script src="theme.js"></script><script src="main.js"></script><script src="steve3d.js"></script>
+<script src="api.js"></script><script src="auth.js"></script><script src="smooth.js"></script><script src="theme.js"></script><script src="main.js"></script>
 <script>
 const user = Auth.currentUser();
 if (!user) window.location.href = 'login.html';
-
-// Инициализация 3D Стива
-const canvas = document.getElementById('steveCanvas');
-const steve = new Steve3D(canvas);
-
-// Каталог косметики
-const ITEMS = [
-  // Скины
-  { id:'skin_steve',   cat:'skin',   name:'Steve',        emoji:'🧑',  rarity:'common',    price:0,    free:true,  color:'#c8a882' },
-  { id:'skin_alex',    cat:'skin',   name:'Alex',         emoji:'👩',  rarity:'common',    price:0,    free:true,  color:'#c8a882' },
-  { id:'skin_space',   cat:'skin',   name:'Space Suit',   emoji:'👨‍🚀', rarity:'rare',      price:199,  free:false, color:'#4fc3f7', isNew:true },
-  { id:'skin_ninja',   cat:'skin',   name:'Ninja',        emoji:'🥷',  rarity:'epic',      price:399,  free:false, color:'#6366f1' },
-  { id:'skin_zombie',  cat:'skin',   name:'Zombie',       emoji:'🧟',  rarity:'rare',      price:249,  free:false, color:'#4ade80' },
-  { id:'skin_robot',   cat:'skin',   name:'Robot',        emoji:'🤖',  rarity:'legendary', price:799,  free:false, color:'#fbbf24', isNew:true },
-  // Шляпы
-  { id:'hat_none',     cat:'hat',    name:'Без шляпы',    emoji:'❌',  rarity:'common',    price:0,    free:true,  color:'#4a5568' },
-  { id:'hat_crown',    cat:'hat',    name:'Корона',       emoji:'👑',  rarity:'legendary', price:999,  free:false, color:'#fbbf24' },
-  { id:'hat_santa',    cat:'hat',    name:'Санта',        emoji:'🎅',  rarity:'rare',      price:299,  free:false, color:'#ef4444' },
-  { id:'hat_wizard',   cat:'hat',    name:'Волшебник',    emoji:'🧙',  rarity:'epic',      price:499,  free:false, color:'#a78bfa', isNew:true },
-  { id:'hat_cowboy',   cat:'hat',    name:'Ковбой',       emoji:'🤠',  rarity:'rare',      price:249,  free:false, color:'#d97706' },
-  // Плащи
-  { id:'cape_none',    cat:'cape',   name:'Без плаща',    emoji:'❌',  rarity:'common',    price:0,    free:true,  color:'#4a5568' },
-  { id:'cape_theday',  cat:'cape',   name:'TheDay Cape',  emoji:'🌊',  rarity:'epic',      price:599,  free:false, color:'#87CEEB', isNew:true },
-  { id:'cape_fire',    cat:'cape',   name:'Fire Cape',    emoji:'🔥',  rarity:'legendary', price:899,  free:false, color:'#f97316' },
-  { id:'cape_galaxy',  cat:'cape',   name:'Galaxy',       emoji:'🌌',  rarity:'epic',      price:699,  free:false, color:'#6366f1' },
-  // Эффекты
-  { id:'fx_none',      cat:'effect', name:'Без эффекта',  emoji:'❌',  rarity:'common',    price:0,    free:true,  color:'#4a5568' },
-  { id:'fx_stars',     cat:'effect', name:'Звёзды',       emoji:'✨',  rarity:'rare',      price:349,  free:false, color:'#fbbf24' },
-  { id:'fx_fire',      cat:'effect', name:'Огонь',        emoji:'🔥',  rarity:'epic',      price:549,  free:false, color:'#f97316', isNew:true },
-  { id:'fx_rainbow',   cat:'effect', name:'Радуга',       emoji:'🌈',  rarity:'legendary', price:999,  free:false, color:'#a78bfa' },
-];
-
-const RARITY_LABEL = { common:'Обычный', rare:'Редкий', epic:'Эпический', legendary:'Легендарный' };
-
-let currentTab = 'all';
-let currentCat = 'all';
-let owned = JSON.parse(localStorage.getItem('td_cosm_owned') || '["skin_steve","skin_alex","hat_none","cape_none","fx_none"]');
-let equipped = JSON.parse(localStorage.getItem('td_cosm_equipped') || '{"skin":"skin_steve","hat":"hat_none","cape":"cape_none","effect":"fx_none"}');
-
-function saveOwned() { localStorage.setItem('td_cosm_owned', JSON.stringify(owned)); }
-function saveEquipped() { localStorage.setItem('td_cosm_equipped', JSON.stringify(equipped)); }
-
-function setTab(tab, btn) {
-  currentTab = tab;
-  document.querySelectorAll('.cosm-tab').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderGrid();
-}
-
-function setCat(cat, btn) {
-  currentCat = cat;
-  document.querySelectorAll('.cosm-cat').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderGrid();
-}
-
-function renderGrid() {
-  let items = ITEMS;
-  if (currentCat !== 'all') items = items.filter(i => i.cat === currentCat);
-  if (currentTab === 'owned') items = items.filter(i => owned.includes(i.id));
-  if (currentTab === 'shop') items = items.filter(i => !i.free && !owned.includes(i.id));
-
-  const grid = document.getElementById('cosmGrid');
-  grid.innerHTML = '';
-
-  items.forEach(item => {
-    const isOwned = owned.includes(item.id);
-    const isEquipped = Object.values(equipped).includes(item.id);
-    const card = document.createElement('div');
-    card.className = 'cosm-card' + (isEquipped ? ' equipped-card' : '');
-    card.onclick = () => openItem(item);
-
-    card.innerHTML = `
-      ${item.isNew ? '<div class="cosm-new">NEW</div>' : ''}
-      <div class="cosm-card-preview" style="background:linear-gradient(135deg,${item.color}18,${item.color}06)">
-        <span style="font-size:44px;filter:drop-shadow(0 0 12px ${item.color})">${item.emoji}</span>
-        <div class="cosm-rarity rarity-${item.rarity}">${RARITY_LABEL[item.rarity]}</div>
-      </div>
-      <div class="cosm-card-body">
-        <div class="cosm-card-cat">${{skin:'Скин',hat:'Шляпа',cape:'Плащ',effect:'Эффект'}[item.cat]}</div>
-        <div class="cosm-card-name">${item.name}</div>
-        <div class="cosm-card-footer">
-          <span class="cosm-price ${isOwned?'owned':item.free?'free':''}">${isOwned?'✓ Есть':item.free?'Бесплатно':item.price+'₽'}</span>
-          <button class="cosm-btn ${isEquipped?'equipped':isOwned?'equip':item.free?'free-btn':'buy'}" onclick="event.stopPropagation();quickAction('${item.id}')">
-            ${isEquipped?'Надет':isOwned?'Надеть':item.free?'Получить':'Купить'}
-          </button>
-        </div>
-      </div>
-    `;
-    grid.appendChild(card);
-  });
-}
-
-function quickAction(id) {
-  const item = ITEMS.find(i => i.id === id);
-  if (!item) return;
-  if (owned.includes(id)) {
-    equipItem(item);
-  } else if (item.free) {
-    owned.push(id);
-    saveOwned();
-    equipItem(item);
-    renderGrid();
-  } else {
-    openItem(item);
-  }
-}
-
-function equipItem(item) {
-  equipped[item.cat === 'effect' ? 'effect' : item.cat] = item.id;
-  saveEquipped();
-  updateEquippedUI();
-  renderGrid();
-  // Обновляем 3D персонажа
-  updateSteve();
-}
-
-function updateEquippedUI() {
-  const getItem = id => ITEMS.find(i => i.id === id);
-  const skinItem = getItem(equipped.skin);
-  const hatItem = getItem(equipped.hat);
-  const capeItem = getItem(equipped.cape);
-  const fxItem = getItem(equipped.effect);
-
-  const setEq = (id, item) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (!item || item.id.endsWith('_none')) {
-      el.className = 'cosm-eq-none';
-      el.textContent = 'Нет';
-    } else {
-      el.className = 'cosm-eq-name';
-      el.textContent = item.emoji + ' ' + item.name;
-    }
-  };
-
-  setEq('eq-hat', hatItem);
-  setEq('eq-cape', capeItem);
-  setEq('eq-skin', skinItem);
-  setEq('eq-effect', fxItem);
-}
-
-function updateSteve() {
-  const skinItem = ITEMS.find(i => i.id === equipped.skin);
-  if (skinItem) {
-    // Меняем цвет скина в рендере
-    steve.skinColor = skinItem.color;
-  }
-}
-
-function openItem(item) {
-  const isOwned = owned.includes(item.id);
-  const isEquipped = Object.values(equipped).includes(item.id);
-  document.getElementById('modalContent').innerHTML = `
-    <div style="text-align:center;margin-bottom:16px">
-      <div style="font-size:64px;filter:drop-shadow(0 0 20px ${item.color})">${item.emoji}</div>
-      <div class="cosm-rarity rarity-${item.rarity}" style="display:inline-block;margin:8px 0">${RARITY_LABEL[item.rarity]}</div>
-      <h3 style="color:#fff;font-size:18px;margin-bottom:4px">${item.name}</h3>
-      <div style="font-size:12px;color:#4a5568">${{skin:'Скин',hat:'Шляпа',cape:'Плащ',effect:'Эффект'}[item.cat]}</div>
-    </div>
-    ${isOwned ? `
-      <button class="btn-primary" style="width:100%;justify-content:center;border-radius:10px;${isEquipped?'opacity:0.5':''}" onclick="${isEquipped?'':('quickAction(\''+item.id+'\');closeModal()')}" ${isEquipped?'disabled':''}>
-        ${isEquipped ? '✓ Уже надет' : 'Надеть'}
-      </button>
-    ` : item.free ? `
-      <button class="btn-primary" style="width:100%;justify-content:center;border-radius:10px;background:linear-gradient(135deg,#34d399,#059669)" onclick="quickAction('${item.id}');closeModal()">
-        Получить бесплатно
-      </button>
-    ` : `
-      <div style="font-size:28px;font-weight:900;color:#87CEEB;text-align:center;margin-bottom:16px">${item.price}₽</div>
-      <a href="https://funpay.com/users/17389840/" target="_blank" class="btn-primary" style="display:block;text-align:center;border-radius:10px;text-decoration:none;margin-bottom:8px">
-        💳 Купить на FanPay
-      </a>
-      <a href="https://t.me/thedayclient_bot" target="_blank" class="btn-ghost" style="display:block;text-align:center;border-radius:10px;text-decoration:none;font-size:13px">
-        ✈️ @thedayclient_bot
-      </a>
-    `}
-  `;
-  document.getElementById('modalOverlay').classList.add('active');
-}
-
-function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
-
-// Инициализация
-renderGrid();
-updateEquippedUI();
-updateSteve();
 </script>
 </body>
 </html>

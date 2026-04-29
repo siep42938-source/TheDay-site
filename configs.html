@@ -108,16 +108,15 @@
     <div class="dash-breadcrumb">
       <a href="index.html">Главная</a><span>›</span><a href="account.html">Мой профиль</a><span>›</span>Магазин конфигов
     </div>
-    <div style="font-size:24px;font-weight:800;color:#fff;margin-bottom:24px">Магазин конфигов</div>
+    <div style="font-size:24px;font-weight:800;color:#fff;margin-bottom:8px">Магазин конфигов</div>
+    <div style="font-size:13px;color:#4a5568;margin-bottom:32px">Облачные конфиги от сообщества</div>
 
-    <!-- Search -->
-    <div class="configs-search">
-      <input class="glass-input" id="configSearch" placeholder="Поиск конфигов..." oninput="filterConfigs()"/>
-      <button class="btn-ghost" style="white-space:nowrap;padding:10px 18px;border-radius:10px">Фильтры</button>
+    <!-- Пусто -->
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;text-align:center">
+      <div style="font-size:56px;margin-bottom:20px;opacity:0.4">📦</div>
+      <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:8px">Конфигов пока нет</div>
+      <div style="font-size:13px;color:#4a5568;max-width:320px;line-height:1.6">Магазин конфигов скоро откроется. Следите за обновлениями в нашем Discord!</div>
     </div>
-
-    <!-- Grid -->
-    <div class="configs-grid" id="configsGrid"></div>
   </main>
 </div>
 
@@ -139,68 +138,6 @@
 const user = Auth.currentUser();
 if (!user) { window.location.href = 'login.html'; }
 function logout() { Auth.logout(); }
-
-const CONFIGS = [
-  { name:'CFG FLUDERA', author:'Fludera', desc:'Топовый конфиг для PvP с плавными движениями и оптимальными настройками килааура', price:299, downloads:1240, color:'#6366f1' },
-  { name:'Кактус', author:'CactusPlayer', desc:'Агрессивный стиль игры, высокий CPS, идеально для кристального PvP', price:199, downloads:876, color:'#34d399' },
-  { name:'Аквич-Конфиг', author:'Aquich', desc:'Сбалансированный конфиг для стримеров, красивые движения и стабильный геймплей', price:249, downloads:654, color:'#4fc3f7' },
-  { name:'SkyWars Pro', author:'SkyMaster', desc:'Специализированный конфиг для SkyWars с настройками под мосты и быстрый дроп', price:179, downloads:432, color:'#f59e0b' },
-  { name:'BedWars Elite', author:'BedKing', desc:'Оптимизированный под BedWars: быстрая защита кровати и агрессивные атаки', price:229, downloads:789, color:'#ef4444' },
-  { name:'Smooth Legit', author:'LegitPro', desc:'Максимально легитный конфиг, не детектируется античитами, плавные движения', price:349, downloads:2100, color:'#8b5cf6' },
-  { name:'Crystal PvP', author:'CrystalGod', desc:'Специально для кристального PvP, быстрое размещение и оптимальный килааур', price:399, downloads:567, color:'#ec4899' },
-  { name:'HCF Config', author:'HardcoreFan', desc:'Конфиг для HCF серверов, акцент на выживание и командный бой', price:149, downloads:321, color:'#14b8a6' },
-  { name:'Combo Master', author:'ComboKing', desc:'Максимальные комбо, высокий reach, идеально для 1.8 PvP серверов', price:279, downloads:943, color:'#f97316' },
-];
-
-let filtered = [...CONFIGS];
-
-function renderConfigs(list) {
-  const grid = document.getElementById('configsGrid');
-  if (!list.length) {
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#4a5568">Конфиги не найдены</div>';
-    return;
-  }
-  grid.innerHTML = list.map((c, i) => `
-    <div class="config-card">
-      <div class="config-card-top">
-        <div class="config-avatar" style="background:${c.color}22;border:1px solid ${c.color}44;color:${c.color}">
-          ${c.name.slice(0,2).toUpperCase()}
-        </div>
-        <div>
-          <div class="config-card-name">${c.name}</div>
-          <div class="config-card-author">by ${c.author}</div>
-        </div>
-      </div>
-      <div class="config-card-desc">${c.desc}</div>
-      <div class="config-card-footer">
-        <div>
-          <div class="config-card-price">${c.price}₽</div>
-          <div class="config-card-downloads">↓ ${c.downloads.toLocaleString('ru-RU')}</div>
-        </div>
-        <button class="config-buy-btn" onclick="showBuyModal()">Купить</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-function filterConfigs() {
-  const q = document.getElementById('configSearch').value.toLowerCase();
-  filtered = CONFIGS.filter(c =>
-    c.name.toLowerCase().includes(q) ||
-    c.author.toLowerCase().includes(q) ||
-    c.desc.toLowerCase().includes(q)
-  );
-  renderConfigs(filtered);
-}
-
-function showBuyModal() {
-  document.getElementById('buyModal').classList.add('active');
-}
-function closeBuyModal() {
-  document.getElementById('buyModal').classList.remove('active');
-}
-
-renderConfigs(CONFIGS);
 </script>
 </body>
 </html>
