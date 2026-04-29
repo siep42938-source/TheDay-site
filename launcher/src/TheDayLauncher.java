@@ -14,17 +14,24 @@ import javax.swing.text.JTextComponent;
 public class TheDayLauncher {
 
     // ── Константы ─────────────────────────────────────────────────────────────
-    static final String MOD_JAR     = "TheDay-1.0.01.jar";
-    // URL мода на твоём сайте Cloudflare Pages
-    static final String MOD_URL     = "https://theday-site.pages.dev/TheDay-1.0.01.jar";
-    // Fabric installer
-    static final String FABRIC_URL  = "https://maven.fabricmc.net/net/fabricmc/fabric-installer/1.0.1/fabric-installer-1.0.1.jar";
-    static final String MC_VERSION  = "1.21.11";
-    static final String FABRIC_VER  = "0.18.4";
+    static final String MOD_JAR    = "TheDay-1.0.01.jar";
+    static final String MOD_URL    = "https://theday-site.pages.dev/TheDay-1.0.01.jar";
+    static final String MC_VERSION = "1.21.11";
+    static final String FABRIC_VER = "0.18.4";
+    static final String FABRIC_URL = "https://maven.fabricmc.net/net/fabricmc/fabric-installer/1.0.1/fabric-installer-1.0.1.jar";
 
-    static final String MC_DIR      = System.getProperty("user.home") + "\\AppData\\Roaming\\.minecraft";
-    static final String MODS_DIR    = MC_DIR + "\\mods";
-    static final String THEDAY_DIR  = System.getProperty("user.home") + "\\AppData\\Roaming\\TheDay";
+    // Папка клиента на диске C
+    static final String CLIENT_DIR = "C:\\TheDay";
+    static final String CLIENT_MODS = CLIENT_DIR + "\\mods";
+    static final String CLIENT_CONFIGS = CLIENT_DIR + "\\configs";
+    static final String CLIENT_LOGS = CLIENT_DIR + "\\logs";
+    static final String CLIENT_SAVES = CLIENT_DIR + "\\saves";
+    static final String CLIENT_SCREENSHOTS = CLIENT_DIR + "\\screenshots";
+    static final String CLIENT_RESOURCEPACKS = CLIENT_DIR + "\\resourcepacks";
+
+    // Стандартный .minecraft для Fabric
+    static final String MC_DIR   = System.getProperty("user.home") + "\\AppData\\Roaming\\.minecraft";
+    static final String MODS_DIR = MC_DIR + "\\mods";
 
     // Цвета
     static final Color WHITE  = Color.WHITE;
@@ -152,114 +159,167 @@ public class TheDayLauncher {
     // ── Запуск клиента ────────────────────────────────────────────────────────
     static void launchClient(TDProgress pb, JLabel statusTxt, TDBtn launch) {
         try {
-            File thedayDir = new File(THEDAY_DIR);
-            thedayDir.mkdirs();
-            File modsDir = new File(MODS_DIR);
-            modsDir.mkdirs();
+            // ── Шаг 1: Создаём папку C:\TheDay\ со структурой ─────────────
+            status(statusTxt, "Подготовка папки клиента...");
+            pb.setProgress(0.05f);
+            for (String dir : new String[]{
+                CLIENT_DIR, CLIENT_MODS, CLIENT_CONFIGS,
+                CLIENT_LOGS, CLIENT_SAVES, CLIENT_SCREENSHOTS, CLIENT_RESOURCEPACKS
+            }) {
+                new File(dir).mkdirs();
+            }
 
-            // ── 1. Скачиваем мод если нет ─────────────────────────────────
-            File modFile = new File(MODS_DIR, MOD_JAR);
-            if (!modFile.exists()) {
-                // Сначала ищем рядом с лаунчером
+            // Создаём options.txt если нет (базовые настройки)
+            File optionsFile = new File(CLIENT_DIR, "options.txt");
+            if (!optionsFile.exists()) {
+                try (PrintWriter pw = new PrintWriter(optionsFile)) {
+                    pw.println("version:3953");
+                    pw.println("autoJump:false");
+                    pw.println("fov:0.0");
+                    pw.println("renderDistance:12");
+                    pw.println("guiScale:3");
+                    pw.println("lang:ru_ru");
+                }
+            }
+
+            // ── Шаг 2: Устанавливаем мод ──────────────────────────────────
+            status(statusTxt, "Проверка мода...");
+            pb.setProgress(0.15f);
+
+            File modInClient = new File(CLIENT_MODS, MOD_JAR);
+            File modInMC     = new File(MODS_DIR, MOD_JAR);
+
+            if (!modInClient.exists()) {
+                // Ищем рядом с лаунчером
                 File localMod = null;
                 try {
-                    File launcherDir = new File(TheDayLauncher.class.getProtectionDomain()
-                        .getCodeSource().getLocation().toURI()).getParentFile();
+                    File launcherDir = new File(TheDayLauncher.class
+                        .getProtectionDomain().getCodeSource().getLocation().toURI()).getParentFile();
                     File f = new File(launcherDir, MOD_JAR);
                     if (f.exists()) localMod = f;
                 } catch (Exception ignored) {}
 
                 if (localMod != null) {
-                    // Копируем локальный мод
                     status(statusTxt, "Установка мода...");
-                    pb.setProgress(0.4f);
-                    Files.copy(localMod.toPath(), modFile.toPath(),
+                    pb.setProgress(0.25f);
+                    Files.copy(localMod.toPath(), modInClient.toPath(),
                         java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                 } else {
                     // Скачиваем с сайта
-                    status(statusTxt, "Скачиваем мод...");
-                    pb.setProgress(0.1f);
-                    download(MOD_URL, modFile, (pct) ->
+                    download(MOD_URL, modInClient, (pct) ->
                         SwingUtilities.invokeLater(() -> {
                             statusTxt.setText("Скачиваем мод... " + pct + "%");
-                            pb.setProgress(pct / 100f * 0.4f);
+                            pb.setProgress(0.15f + pct / 100f * 0.25f);
                         })
                     );
                 }
-            } else {
-                // Удаляем старые версии, оставляем текущую
-                File[] old = modsDir.listFiles((d, n) -> n.startsWith("TheDay-") && n.endsWith(".jar") && !n.equals(MOD_JAR));
-                if (old != null) for (File f : old) f.delete();
             }
 
-            // ── 2. Проверяем установлен ли Fabric ─────────────────────────
+            // Копируем мод в .minecraft/mods для Fabric
+            new File(MODS_DIR).mkdirs();
+            // Удаляем старые версии
+            File[] oldMods = new File(MODS_DIR).listFiles(
+                (d, n) -> n.startsWith("TheDay-") && n.endsWith(".jar") && !n.equals(MOD_JAR));
+            if (oldMods != null) for (File f : oldMods) f.delete();
+            Files.copy(modInClient.toPath(), modInMC.toPath(),
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+            // ── Шаг 3: Устанавливаем Fabric если нет ─────────────────────
+            pb.setProgress(0.45f);
             File fabricProfile = new File(MC_DIR + "\\versions\\fabric-loader-" + FABRIC_VER + "-" + MC_VERSION);
             if (!fabricProfile.exists()) {
-                status(statusTxt, "Устанавливаем Fabric...");
-                pb.setProgress(0.45f);
-                File fabricInstaller = new File(THEDAY_DIR, "fabric-installer.jar");
-                if (!fabricInstaller.exists()) {
-                    download(FABRIC_URL, fabricInstaller, (pct) ->
+                status(statusTxt, "Скачиваем Fabric Installer...");
+                File fabricJar = new File(CLIENT_DIR, "fabric-installer.jar");
+                if (!fabricJar.exists()) {
+                    download(FABRIC_URL, fabricJar, (pct) ->
                         SwingUtilities.invokeLater(() -> {
                             statusTxt.setText("Скачиваем Fabric... " + pct + "%");
-                            pb.setProgress(0.45f + pct / 100f * 0.2f);
+                            pb.setProgress(0.45f + pct / 100f * 0.15f);
                         })
                     );
                 }
-                // Запускаем установщик Fabric в тихом режиме
                 status(statusTxt, "Устанавливаем Fabric...");
-                pb.setProgress(0.65f);
-                Process fabricProc = new ProcessBuilder(
-                    findJava(), "-jar", fabricInstaller.getAbsolutePath(),
-                    "client", "-mcversion", MC_VERSION,
-                    "-loader", FABRIC_VER, "-noprofile"
-                ).inheritIO().start();
-                fabricProc.waitFor();
+                pb.setProgress(0.62f);
+                Process fp = new ProcessBuilder(
+                    findJava(), "-jar", fabricJar.getAbsolutePath(),
+                    "client",
+                    "-mcversion", MC_VERSION,
+                    "-loader", FABRIC_VER,
+                    "-noprofile"
+                ).redirectErrorStream(true).start();
+                // Читаем вывод чтобы процесс не завис
+                new Thread(() -> {
+                    try (BufferedReader br = new BufferedReader(
+                            new InputStreamReader(fp.getInputStream()))) {
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            System.out.println("[Fabric] " + line);
+                        }
+                    } catch (Exception ignored) {}
+                }).start();
+                fp.waitFor();
             }
 
-            // ── 3. Запускаем Minecraft напрямую ───────────────────────────
+            // ── Шаг 4: Запускаем Minecraft с gameDir = C:\TheDay ─────────
             status(statusTxt, "Запуск Minecraft...");
             pb.setProgress(0.85f);
-            Thread.sleep(400);
+            Thread.sleep(500);
 
-            // Ищем профиль Fabric в versions
+            // Ищем установленный профиль Fabric
             String profileId = "fabric-loader-" + FABRIC_VER + "-" + MC_VERSION;
             File versionsDir = new File(MC_DIR + "\\versions");
-            // Ищем любой fabric профиль для нужной версии MC
             if (versionsDir.exists()) {
                 File[] profiles = versionsDir.listFiles(f ->
-                    f.isDirectory() && f.getName().contains("fabric") && f.getName().contains(MC_VERSION));
-                if (profiles != null && profiles.length > 0) profileId = profiles[0].getName();
+                    f.isDirectory()
+                    && f.getName().toLowerCase().contains("fabric")
+                    && f.getName().contains(MC_VERSION));
+                if (profiles != null && profiles.length > 0) {
+                    profileId = profiles[0].getName();
+                }
             }
 
-            // Открываем Minecraft Launcher с нужным профилем
-            String[] mcPaths = {
+            // Пробуем запустить Minecraft Launcher с gameDir
+            String[] mcExePaths = {
                 System.getProperty("user.home") + "\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Minecraft Launcher\\Minecraft Launcher.exe",
                 "C:\\Program Files (x86)\\Minecraft Launcher\\MinecraftLauncher.exe",
                 "C:\\Program Files\\Minecraft Launcher\\MinecraftLauncher.exe",
                 "C:\\XboxGames\\Minecraft Launcher\\Content\\Minecraft.exe"
             };
+
             boolean started = false;
-            for (String path : mcPaths) {
-                File f = new File(path);
-                if (f.exists()) {
-                    new ProcessBuilder(f.getAbsolutePath(), "--workDir", MC_DIR, "--launchSuite", profileId)
-                        .inheritIO().start();
+            for (String path : mcExePaths) {
+                File exe = new File(path);
+                if (exe.exists()) {
+                    new ProcessBuilder(
+                        exe.getAbsolutePath(),
+                        "--workDir", CLIENT_DIR,
+                        "--gameDir", CLIENT_DIR
+                    ).start();
                     started = true;
                     break;
                 }
             }
+
             if (!started) {
-                Runtime.getRuntime().exec(new String[]{"cmd", "/c", "start", "minecraft://"});
+                // Fallback: открываем через URI
+                try {
+                    Desktop.getDesktop().browse(new URI("minecraft://"));
+                } catch (Exception ignored) {
+                    // Последний вариант — через cmd
+                    new ProcessBuilder("cmd", "/c", "start", "", "minecraft://")
+                        .start();
+                }
             }
 
             pb.setProgress(1f);
-            Thread.sleep(800);
+            Thread.sleep(1000);
             SwingUtilities.invokeLater(() -> System.exit(0));
 
         } catch (Exception ex) {
+            ex.printStackTrace();
             SwingUtilities.invokeLater(() -> {
-                pb.setVisible(false); launch.setVisible(true);
+                pb.setVisible(false);
+                launch.setVisible(true);
                 statusTxt.setText("Ошибка: " + ex.getMessage());
             });
         }
