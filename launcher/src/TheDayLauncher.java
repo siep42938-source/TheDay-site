@@ -863,50 +863,39 @@ public class TheDayLauncher {
     }
 
     static String findJava() {
-        // 1. Проверяем JAVA_HOME env
+        // 1. JAVA_HOME env
         String javaHome = System.getenv("JAVA_HOME");
         if (javaHome != null && !javaHome.isEmpty()) {
             File java = new File(javaHome, "bin\\java.exe");
             if (java.exists()) return java.getAbsolutePath();
         }
-        // 2. Ищем java.exe в PATH через where
+        // 2. Стандартные пути — Eclipse Adoptium (Temurin), Oracle, Microsoft
+        String[] bases = {
+            "C:\\Program Files\\Eclipse Adoptium",
+            "C:\\Program Files\\Java",
+            "C:\\Program Files\\Microsoft",
+            "C:\\Program Files\\BellSoft",
+            "C:\\Program Files\\Azul Systems",
+        };
+        for (String base : bases) {
+            File dir = new File(base);
+            if (!dir.exists()) continue;
+            File[] subs = dir.listFiles();
+            if (subs == null) continue;
+            // Сортируем по имени в обратном порядке — берём новейшую версию
+            java.util.Arrays.sort(subs, (a, b) -> b.getName().compareTo(a.getName()));
+            for (File sub : subs) {
+                File java = new File(sub, "bin\\java.exe");
+                if (java.exists()) return java.getAbsolutePath();
+            }
+        }
+        // 3. where java — берём первый результат
         try {
             Process p = Runtime.getRuntime().exec(new String[]{"where", "java"});
             String out = new String(p.getInputStream().readAllBytes()).trim();
-            for (String line : out.split("\\r?\\n")) {
-                line = line.trim();
-                // Пропускаем Eclipse и другие IDE
-                if (!line.isEmpty() && !line.toLowerCase().contains("eclipse")
-                        && !line.toLowerCase().contains("intellij")
-                        && !line.toLowerCase().contains("android")) {
-                    return line;
-                }
-            }
+            String first = out.split("\\r?\\n")[0].trim();
+            if (!first.isEmpty()) return first;
         } catch (Exception ignored) {}
-        // 3. Стандартные пути Java 17/21
-        String[] standardPaths = {
-            "C:\\Program Files\\Java\\jdk-21\\bin\\java.exe",
-            "C:\\Program Files\\Java\\jdk-17\\bin\\java.exe",
-            "C:\\Program Files\\Java\\jdk-21.0.1\\bin\\java.exe",
-            "C:\\Program Files\\Java\\jdk-17.0.9\\bin\\java.exe",
-            "C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.1.12-hotspot\\bin\\java.exe",
-            "C:\\Program Files\\Eclipse Adoptium\\jdk-17.0.9.9-hotspot\\bin\\java.exe",
-        };
-        for (String path : standardPaths) {
-            if (new File(path).exists()) return path;
-        }
-        // 4. Ищем в Program Files
-        for (String base : new String[]{"C:\\Program Files\\Java", "C:\\Program Files\\Eclipse Adoptium", "C:\\Program Files\\Microsoft"}) {
-            File dir = new File(base);
-            if (dir.exists()) {
-                File[] subs = dir.listFiles();
-                if (subs != null) for (File sub : subs) {
-                    File java = new File(sub, "bin\\java.exe");
-                    if (java.exists()) return java.getAbsolutePath();
-                }
-            }
-        }
-        // 5. Fallback — java из PATH
         return "java";
     }
 
