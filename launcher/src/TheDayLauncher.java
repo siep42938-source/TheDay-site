@@ -550,7 +550,6 @@ public class TheDayLauncher {
             pb.setProgress(0.15f);
             File modFile = new File(CLIENT_MODS, MOD_JAR);
             if (!modFile.exists()) {
-                // Сначала ищем рядом с лаунчером
                 File local = null;
                 try {
                     File dir = new File(TheDayLauncher.class
@@ -570,109 +569,50 @@ public class TheDayLauncher {
                 }
             }
 
-            // ── Шаг 3: Ищем Minecraft client.jar в gradle кэше ───────────
-            status(statusTxt, "Поиск Minecraft " + MC_VERSION + "...");
-            pb.setProgress(0.30f);
-            String mcJarPath = findMinecraftClientJar();
-            if (mcJarPath == null)
-                throw new Exception("Minecraft " + MC_VERSION + " не найден в gradle кэше.\nЗапусти проект через IntelliJ/Gradle хотя бы раз.");
+            // ── Шаг 3: Запуск через gradlew ───────────────────────────────
+            status(statusTxt, "Запуск клиента...");
+            pb.setProgress(0.50f);
 
-            // ── Шаг 4: Ищем fabric-loader ─────────────────────────────────
-            status(statusTxt, "Поиск Fabric Loader...");
-            pb.setProgress(0.40f);
-            String fabricLoaderPath = findFabricLoaderJar();
-            if (fabricLoaderPath == null)
-                throw new Exception("fabric-loader-" + FABRIC_VER + ".jar не найден в gradle кэше.");
-
-            // ── Шаг 5: Собираем classpath из gradle кэша ──────────────────
-            status(statusTxt, "Сборка classpath...");
-            pb.setProgress(0.55f);
-            List<String> classpath = new ArrayList<>();
-            classpath.add(mcJarPath);
-            classpath.add(fabricLoaderPath);
-            classpath.add(modFile.getAbsolutePath());
-
-            // Добавляем все библиотеки из gradle кэша
-            List<String> gradleLibs = collectGradleLibraries();
-            // Исключаем дубли fabric-loader и minecraft
-            for (String lib : gradleLibs) {
-                if (!lib.equals(mcJarPath) && !lib.equals(fabricLoaderPath)
-                        && !lib.equals(modFile.getAbsolutePath())) {
-                    classpath.add(lib);
-                }
+            // Ищем папку Rich-Modern рядом с лаунчером или на рабочем столе
+            String richModernPath = findRichModern();
+            if (richModernPath == null) {
+                throw new Exception("Папка Rich-Modern не найдена.\nПоложи её рядом с лаунчером.");
             }
 
-            // ── Шаг 6: Assets ─────────────────────────────────────────────
-            status(statusTxt, "Проверка ресурсов...");
-            pb.setProgress(0.70f);
-            String assetsDir = findAssetsDir();
-            String assetIndex = "29"; // для 1.21.11
-            if (assetsDir == null) {
-                // Скачиваем assets index
-                assetsDir = CLIENT_ASSETS;
-                new File(assetsDir, "indexes").mkdirs();
-                File assetIndexFile = new File(assetsDir + "\\indexes", assetIndex + ".json");
-                if (!assetIndexFile.exists()) {
-                    download("https://piston-meta.mojang.com/v1/packages/2de8ae2f8fc27a8b024487da3311a6898cc3d1f2/29.json",
-                        assetIndexFile, null);
-                }
-                if (assetIndexFile.exists()) {
-                    downloadAssets(assetIndexFile, assetsDir,
-                        (done, total) -> SwingUtilities.invokeLater(() -> {
-                            statusTxt.setText("Ресурсы: " + done + "/" + total);
-                            pb.setProgress(0.70f + (float) done / Math.max(total,1) * 0.15f);
-                        }));
-                }
+            String javaExe = findJava();
+            File richDir = new File(richModernPath);
+
+            // Копируем мод в run/mods
+            File runMods = new File(richDir, "run\\mods");
+            runMods.mkdirs();
+            File modDest = new File(runMods, MOD_JAR);
+            if (!modDest.exists()) {
+                Files.copy(modFile.toPath(), modDest.toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             }
 
-            // ── Шаг 7: Natives ────────────────────────────────────────────
-            status(statusTxt, "Проверка natives...");
-            pb.setProgress(0.87f);
-            // Используем natives из Rich-Modern если есть, иначе из win32-x86-64
-            String nativesDir = CLIENT_NATIVES;
-            new File(nativesDir).mkdirs();
-            // Копируем discord-rpc.dll если есть рядом с лаунчером
-            try {
-                File launcherDir = new File(TheDayLauncher.class
-                    .getProtectionDomain().getCodeSource().getLocation().toURI()).getParentFile();
-                File dll = new File(launcherDir, "win32-x86-64\\discord-rpc.dll");
-                if (dll.exists()) {
-                    Files.copy(dll.toPath(), new File(nativesDir, "discord-rpc.dll").toPath(),
-                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                }
-            } catch (Exception ignored) {}
-
-            // ── Шаг 8: Запуск ─────────────────────────────────────────────
+            pb.setProgress(0.80f);
             status(statusTxt, "Запуск...");
-            pb.setProgress(0.92f);
             Thread.sleep(300);
 
-            String cp = String.join(File.pathSeparator, classpath);
-
+            // Запускаем через gradlew runClient
             List<String> cmd = new ArrayList<>();
-            cmd.add(findJava());
-            cmd.add("-Xmx2G"); cmd.add("-Xms512M");
-            cmd.add("-XX:+UseG1GC");
-            cmd.add("-Djava.library.path=" + nativesDir);
-            cmd.add("-Dfabric.skipMcProvider=true");
-            cmd.add("-cp"); cmd.add(cp);
-            cmd.add("net.fabricmc.loader.impl.launch.knot.KnotClient");
-            cmd.add("--gameDir");    cmd.add(CLIENT_DIR);
-            cmd.add("--assetsDir");  cmd.add(assetsDir);
-            cmd.add("--assetIndex"); cmd.add(assetIndex);
-            cmd.add("--version");    cmd.add(MC_VERSION);
-            cmd.add("--accessToken"); cmd.add(savedToken != null ? savedToken : "0");
-            cmd.add("--userType");   cmd.add("legacy");
-            cmd.add("--username");   cmd.add(savedUser != null ? savedUser : "Player");
-            // Передаём данные сессии клиенту через JVM свойства
-            if (savedToken != null) cmd.add(1, "-Dtheday.token=" + savedToken);
-            if (savedUid   != null) cmd.add(1, "-Dtheday.uid=" + savedUid);
-            if (savedUser  != null) cmd.add(1, "-Dtheday.username=" + savedUser);
+            cmd.add("cmd.exe");
+            cmd.add("/c");
+            cmd.add("gradlew.bat");
+            cmd.add("runClient");
+            cmd.add("--no-daemon");
+
+            // Передаём токен через JVM аргументы в gradle
+            if (savedToken != null) {
+                cmd.add("-Ptheday.token=" + savedToken);
+            }
 
             Process proc = new ProcessBuilder(cmd)
-                .directory(new File(CLIENT_DIR))
+                .directory(richDir)
                 .redirectErrorStream(true)
                 .start();
+
             new Thread(() -> {
                 try (BufferedReader br = new BufferedReader(
                         new InputStreamReader(proc.getInputStream()))) {
@@ -683,7 +623,12 @@ public class TheDayLauncher {
             }).start();
 
             pb.setProgress(1f);
-            Thread.sleep(1500);
+            Thread.sleep(2000);
+            // Ждём завершения процесса
+            int exitCode = proc.waitFor();
+            if (exitCode != 0) {
+                throw new Exception("gradlew завершился с кодом " + exitCode + ". Проверь консоль.");
+            }
             SwingUtilities.invokeLater(() -> System.exit(0));
 
         } catch (Exception ex) {
@@ -694,6 +639,26 @@ public class TheDayLauncher {
                 statusTxt.setText("Ошибка: " + ex.getMessage());
             });
         }
+    }
+
+    static String findRichModern() {
+        // Ищем рядом с лаунчером
+        try {
+            File launcherDir = new File(TheDayLauncher.class
+                .getProtectionDomain().getCodeSource().getLocation().toURI()).getParentFile();
+            File f = new File(launcherDir, "Rich-Modern");
+            if (f.exists() && new File(f, "gradlew.bat").exists()) return f.getAbsolutePath();
+            // Рядом с лаунчером на уровень выше
+            f = new File(launcherDir.getParentFile(), "Rich-Modern");
+            if (f.exists() && new File(f, "gradlew.bat").exists()) return f.getAbsolutePath();
+        } catch (Exception ignored) {}
+        // Рабочий стол
+        String desktop = System.getProperty("user.home") + "\\Desktop\\Rich-Modern";
+        if (new File(desktop, "gradlew.bat").exists()) return desktop;
+        // Диск C
+        String c = "C:\\Rich-Modern";
+        if (new File(c, "gradlew.bat").exists()) return c;
+        return null;
     }
 
     // ── Вспомогательные методы ────────────────────────────────────────────────
