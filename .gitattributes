@@ -1,2 +1,9 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Binary files — no line ending conversion
+*.jar binary
+*.class binary
+*.png binary
+*.jpg binary
+*.gif binary
