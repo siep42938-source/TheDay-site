@@ -41,3 +41,12 @@
     # Cross-Origin изоляция
     Cross-Origin-Opener-Policy = "same-origin"
     Cross-Origin-Resource-Policy = "same-origin"
+
+# Правила для JAR файлов — правильный MIME-тип и скачивание
+[[headers]]
+  for = "/*.jar"
+
+  [headers.values]
+    Content-Type = "application/java-archive"
+    Content-Disposition = "attachment"
+    Cross-Origin-Resource-Policy = "cross-origin"
